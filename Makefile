@@ -25,6 +25,7 @@ TARGET_BIN="$(DESTDIR)$(bindir)/$(BINARY)"
 
 KEYBINDINGS_CONF="$(DESTDIR)$(sharedir)/cosmic/com.system76.CosmicSettings.Shortcuts/v1/defaults"
 TILING_EXCEPTIONS_CONF="$(DESTDIR)$(sharedir)/cosmic/com.system76.CosmicSettings.WindowRules/v1/tiling_exception_defaults"
+INPUT_METHOD_MAP_CONF="$(DESTDIR)$(sharedir)/cosmic/com.system76.CosmicComp/v1/input_method_keyboard_map"
 
 all: extract-vendor
 	cargo build $(ARGS)
@@ -51,6 +52,7 @@ install:
 	install -Dm0755 "$(CARGO_TARGET_DIR)/$(TARGET)/$(BINARY)" "$(TARGET_BIN)"
 	install -Dm0644 "data/keybindings.ron" "$(KEYBINDINGS_CONF)"
 	install -Dm0644 "data/tiling-exceptions.ron" "$(TILING_EXCEPTIONS_CONF)"
+	install -Dm0644 "data/input-method-keyboard-map.ron" "$(INPUT_METHOD_MAP_CONF)"
 
 install-bare-session: install
 	install -Dm0644 "data/cosmic.desktop" "$(DESTDIR)$(sharedir)/wayland-sessions/cosmic.desktop"
@@ -60,7 +62,7 @@ install-bare-session: install
 	install -Dm0755 "data/cosmic-service" "$(DESTDIR)/$(bindir)/cosmic-service"
 
 uninstall:
-	rm "$(TARGET_BIN)" "$(KEYBINDINGS_CONF)"
+	rm "$(TARGET_BIN)" "$(KEYBINDINGS_CONF)" "$(INPUT_METHOD_MAP_CONF)"
 
 uninstall-bare-session:
 	rm "$(DESTDIR)$(sharedir)/wayland-sessions/cosmic.desktop"

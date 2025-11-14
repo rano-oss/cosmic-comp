@@ -4,8 +4,11 @@ use crate::{
     shell::Shell,
     state::{BackendData, State},
     utils::prelude::OutputExt,
-    wayland::protocols::{
-        output_configuration::OutputConfigurationState, workspace::WorkspaceUpdateGuard,
+    wayland::{
+        handlers::input_method::InputMethodKeyboardMap,
+        protocols::{
+            output_configuration::OutputConfigurationState, workspace::WorkspaceUpdateGuard,
+        },
     },
 };
 use anyhow::Context;
@@ -27,6 +30,7 @@ pub use smithay::{
         },
     },
     utils::{Logical, Physical, Point, SERIAL_COUNTER, Size, Transform},
+    wayland::input_method::InputMethodHandle,
 };
 use std::{
     cell::{Ref, RefCell},
@@ -36,7 +40,7 @@ use std::{
     path::PathBuf,
     sync::{Arc, atomic::AtomicBool},
 };
-use tracing::{error, warn};
+use tracing::{debug, error, warn};
 
 mod input_config;
 pub mod key_bindings;
@@ -792,6 +796,35 @@ fn config_changed(config: cosmic_config::Config, keys: Vec<String>, state: &mut 
                         if let Err(err) = keyboard.set_xkb_config(state, xkb_config_to_wl(&value)) {
                             error!(?err, "Failed to load provided xkb config");
                             // TODO Revert to default?
+                        } else {
+                            // Switch input method to match the new keyboard layout
+                            if let Some(input_method_handle) =
+                                seat.user_data().get::<InputMethodHandle>()
+                            {
+                                let mapping = InputMethodKeyboardMap::load();
+                                // Extract the first layout if multiple are specified (e.g., "us,jp" -> "us")
+                                let primary_layout = value.layout.split(',').next().unwrap_or("");
+                                // Map the layout to an app_id using the configuration
+                                if let Some(app_id) = mapping.get_app_id(primary_layout) {
+                                    // Switch to the input method for this layout (global mode)
+                                    if input_method_handle.set_active_instance(app_id) {
+                                        debug!(
+                                            "Switched input method to '{}' for layout '{}'",
+                                            app_id, primary_layout
+                                        );
+                                    } else {
+                                        debug!(
+                                            "Input method '{}' not available for layout '{}', keeping current",
+                                            app_id, primary_layout
+                                        );
+                                    }
+                                } else {
+                                    debug!(
+                                        "No input method mapping found for layout '{}' - no input method will be activated",
+                                        primary_layout
+                                    );
+                                }
+                            }
                         }
 
                         // Press and release the numlock key to update modifiers.
