@@ -21,7 +21,7 @@ use smithay::{
     utils::{Buffer, IsAlive, Monotonic, Point, Rectangle, Serial, Time, Transform},
     wayland::compositor::with_states,
 };
-use tracing::warn;
+use tracing::{info, warn};
 
 use super::grabs::{SeatMenuGrabState, SeatMoveGrabState};
 
@@ -230,6 +230,14 @@ pub fn create_seat(
         )
     })
     .expect("Failed to load xkb configuration files");
+
+    info!(
+        "Initialized keyboard with layout '{}' (variant: '{}', model: '{}', options: '{}')",
+        conf.layout,
+        conf.variant,
+        conf.model,
+        conf.options.as_deref().unwrap_or("none")
+    );
     seat.add_pointer();
     seat.add_touch();
 

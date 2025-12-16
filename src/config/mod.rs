@@ -5,7 +5,7 @@ use crate::{
     state::{BackendData, State},
     utils::prelude::OutputExt,
     wayland::{
-        handlers::input_method::InputMethodKeyboardMap,
+        handlers::input_method::sync_input_method_with_layout,
         protocols::{
             output_configuration::OutputConfigurationState, workspace::WorkspaceUpdateGuard,
         },
@@ -30,7 +30,6 @@ pub use smithay::{
         },
     },
     utils::{Logical, Physical, Point, SERIAL_COUNTER, Size, Transform},
-    wayland::input_method::InputMethodHandle,
 };
 use std::{
     cell::{Ref, RefCell},
@@ -40,7 +39,7 @@ use std::{
     path::PathBuf,
     sync::{Arc, atomic::AtomicBool},
 };
-use tracing::{debug, error, warn};
+use tracing::{error, info, warn};
 
 mod input_config;
 pub mod key_bindings;
@@ -189,6 +188,19 @@ impl Config {
                 }
                 c
             });
+
+        // Log initial XKB config
+        info!(
+            "Loaded initial XKB config: layout='{}', variant='{}', model='{}', options='{}'",
+            cosmic_comp_config.xkb_config.layout,
+            cosmic_comp_config.xkb_config.variant,
+            cosmic_comp_config.xkb_config.model,
+            cosmic_comp_config
+                .xkb_config
+                .options
+                .as_deref()
+                .unwrap_or("none")
+        );
 
         // Listen for updates to the toolkit config
         if let Ok(tk_config) = cosmic_config::Config::new("com.system76.CosmicTk", 1) {
@@ -774,9 +786,11 @@ pub fn change_modifier_state(
 }
 
 fn config_changed(config: cosmic_config::Config, keys: Vec<String>, state: &mut State) {
+    info!("config_changed called with keys: {:?}", keys);
     for key in &keys {
         match key.as_str() {
             "xkb_config" => {
+                info!("config_changed: Processing xkb_config change");
                 let value = get_config::<XkbConfig>(&config, "xkb_config");
                 let seats = state
                     .common
@@ -797,34 +811,20 @@ fn config_changed(config: cosmic_config::Config, keys: Vec<String>, state: &mut 
                             error!(?err, "Failed to load provided xkb config");
                             // TODO Revert to default?
                         } else {
+                            info!(
+                                "Keyboard layout changed to '{}' (variant: '{}', model: '{}', options: '{}')",
+                                value.layout,
+                                value.variant,
+                                value.model,
+                                value.options.as_deref().unwrap_or("none")
+                            );
+                            info!(
+                                "config_changed: Calling sync_input_method_with_layout for layout '{}'",
+                                value.layout
+                            );
                             // Switch input method to match the new keyboard layout
-                            if let Some(input_method_handle) =
-                                seat.user_data().get::<InputMethodHandle>()
-                            {
-                                let mapping = InputMethodKeyboardMap::load();
-                                // Extract the first layout if multiple are specified (e.g., "us,jp" -> "us")
-                                let primary_layout = value.layout.split(',').next().unwrap_or("");
-                                // Map the layout to an app_id using the configuration
-                                if let Some(app_id) = mapping.get_app_id(primary_layout) {
-                                    // Switch to the input method for this layout (global mode)
-                                    if input_method_handle.set_active_instance(app_id) {
-                                        debug!(
-                                            "Switched input method to '{}' for layout '{}'",
-                                            app_id, primary_layout
-                                        );
-                                    } else {
-                                        debug!(
-                                            "Input method '{}' not available for layout '{}', keeping current",
-                                            app_id, primary_layout
-                                        );
-                                    }
-                                } else {
-                                    debug!(
-                                        "No input method mapping found for layout '{}' - no input method will be activated",
-                                        primary_layout
-                                    );
-                                }
-                            }
+                            sync_input_method_with_layout(state, &seat, &value.layout);
+                            info!("config_changed: sync_input_method_with_layout completed");
                         }
 
                         // Press and release the numlock key to update modifiers.

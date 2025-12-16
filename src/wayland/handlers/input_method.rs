@@ -35,7 +35,7 @@ use smithay::{
 };
 use std::collections::HashMap;
 use std::fs;
-use tracing::{debug, error, warn};
+use tracing::{debug, error, info, warn};
 
 impl InputMethodHandler for State {
     fn new_popup(&mut self, surface: PopupSurface) {
@@ -81,19 +81,27 @@ impl InputMethodKeyboardMap {
             if let Ok(contents) = fs::read_to_string(&config_path) {
                 match ron::from_str::<HashMap<String, String>>(&contents) {
                     Ok(map) => {
-                        debug!(
+                        info!(
                             "Loaded input method keyboard map from {:?} with {} entries",
                             config_path,
                             map.len()
                         );
+                        for (layout, app_id) in &map {
+                            info!("  Layout '{}' -> Input method '{}'", layout, app_id);
+                        }
                         return Self(map);
                     }
                     Err(err) => {
                         error!("Failed to parse {:?}: {}", config_path, err);
                     }
                 }
+            } else {
+                info!("No input method keyboard map found at {:?}", config_path);
             }
         }
+
+        // Return empty map if loading failed
+        Self(HashMap::new())
     }
 
     /// Get the user config path for the input method keyboard map
@@ -116,4 +124,143 @@ impl InputMethodKeyboardMap {
     pub fn get_app_id(&self, layout: &str) -> Option<&str> {
         self.0.get(layout).map(|s| s.as_str())
     }
+
+    /// Check if the map is empty
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+/// Synchronize the active input method with the current keyboard layout
+pub fn sync_input_method_with_layout(
+    state: &mut State,
+    seat: &smithay::input::Seat<State>,
+    layout: &str,
+) {
+    use smithay::wayland::input_method::InputMethodSeat;
+    use smithay::wayland::text_input::TextInputHandle;
+
+    info!(
+        "======== sync_input_method_with_layout: ENTRY - seat '{}', layout '{}' ========",
+        seat.name(),
+        layout
+    );
+
+    // Use InputMethodSeat trait to ensure handle is created
+    let input_method_handle = seat.input_method();
+
+    let Some(text_input_handle) = seat.user_data().get::<TextInputHandle>() else {
+        info!(
+            "sync_input_method_with_layout: No text input handle for seat '{}'",
+            seat.name()
+        );
+        return;
+    };
+
+    // Load the keyboard layout mapping
+    let mapping = InputMethodKeyboardMap::load();
+    if mapping.is_empty() {
+        info!(
+            "sync_input_method_with_layout: No input method mapping configured - deactivating input method"
+        );
+        input_method_handle.deactivate_input_method(state);
+        return;
+    }
+
+    // Get the actual active layout from the keyboard
+    // We use the layout index to extract the short code from the config string
+    let active_layout_code = if let Some(keyboard) = seat.get_keyboard() {
+        keyboard.with_xkb_state(state, |xkb| {
+            let active_layout_idx = xkb.xkb().lock().unwrap().active_layout();
+            let active_name = xkb
+                .xkb()
+                .lock()
+                .unwrap()
+                .layout_name(active_layout_idx)
+                .to_string();
+
+            // Extract the layout short code from the config string using the index
+            let layouts: Vec<&str> = layout.split(',').collect();
+            let layout_code = if (active_layout_idx.0 as usize) < layouts.len() {
+                layouts[active_layout_idx.0 as usize]
+            } else {
+                layouts.first().copied().unwrap_or("")
+            };
+
+            info!(
+                "sync_input_method_with_layout: Active layout index: {:?}, name: '{}', code: '{}'",
+                active_layout_idx, active_name, layout_code
+            );
+            layout_code.to_string()
+        })
+    } else {
+        // Fallback to first layout if keyboard is not available
+        let fallback = layout.split(',').next().unwrap_or("");
+        info!(
+            "sync_input_method_with_layout: No keyboard available, using first layout from string: '{}'",
+            fallback
+        );
+        fallback.to_string()
+    };
+
+    info!(
+        "sync_input_method_with_layout: Using active layout code: '{}'",
+        active_layout_code
+    );
+
+    // Check if there's a mapping for this layout
+    if let Some(app_id) = mapping.get_app_id(&active_layout_code) {
+        info!(
+            "sync_input_method_with_layout: Found mapping for layout '{}' -> input method '{}'",
+            active_layout_code, app_id
+        );
+
+        // Try to set the corresponding input method as active
+        if input_method_handle.set_active_instance(app_id) {
+            info!(
+                "sync_input_method_with_layout: Successfully set input method '{}' as active for layout '{}'",
+                app_id, active_layout_code
+            );
+
+            // If there's a focused text input, activate the input method on it
+            let mut activated = false;
+            text_input_handle.with_focused_text_input(|_ti, surface| {
+                info!(
+                    "sync_input_method_with_layout: Activating input method on focused text input"
+                );
+                input_method_handle.activate_input_method(state, surface);
+                activated = true;
+            });
+
+            if activated {
+                // Re-enter the text input to make it resend its state to the newly activated IME
+                // This is necessary when switching from a layout without an IME to one with an IME
+                // while a text input is already focused
+                info!(
+                    "sync_input_method_with_layout: Re-entering text input to refresh state with new IME"
+                );
+                text_input_handle.enter();
+            } else {
+                info!(
+                    "sync_input_method_with_layout: No focused text input to activate input method on"
+                );
+            }
+        } else {
+            info!(
+                "sync_input_method_with_layout: Input method '{}' for layout '{}' not registered yet",
+                app_id, active_layout_code
+            );
+        }
+    } else {
+        info!(
+            "sync_input_method_with_layout: No input method mapping for layout '{}' - clearing active instance",
+            active_layout_code
+        );
+        input_method_handle.clear_active_instance(state);
+    }
+
+    info!(
+        "======== sync_input_method_with_layout: EXIT - seat '{}' ========",
+        seat.name()
+    );
 }

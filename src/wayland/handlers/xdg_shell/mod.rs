@@ -15,7 +15,10 @@ use smithay::{
     output::Output,
     reexports::{
         wayland_protocols::xdg::shell::server::xdg_toplevel,
-        wayland_server::protocol::{wl_output::WlOutput, wl_seat::WlSeat},
+        wayland_server::{
+            Resource,
+            protocol::{wl_output::WlOutput, wl_seat::WlSeat},
+        },
     },
     utils::{Logical, Point, Serial},
     wayland::{
@@ -28,7 +31,7 @@ use smithay::{
     },
 };
 use std::cell::Cell;
-use tracing::warn;
+use tracing::{info, warn};
 
 use super::compositor::client_compositor_state;
 
@@ -55,27 +58,45 @@ impl XdgShellHandler for State {
     }
 
     fn new_popup(&mut self, surface: PopupSurface, positioner: PositionerState) {
+        info!(
+            "XdgShellHandler::new_popup - parent: {:?}, geometry: {:?}",
+            surface.get_parent_surface().as_ref().map(|s| s.id()),
+            positioner.get_geometry()
+        );
+
         surface.with_pending_state(|state| {
             state.geometry = positioner.get_geometry();
             state.positioner = positioner;
         });
 
+        // Unconstrain popup if it has a parent
         if surface.get_parent_surface().is_some() {
-            // let other shells deal with their popups
             self.common.shell.read().unconstrain_popup(&surface);
+        } else {
+            info!("Popup created without parent (will be set during grab)");
+        }
 
-            if let Err(err) = surface.send_configure() {
-                warn!("Unable to configure popup. {err:?}",);
-            } else {
-                self.common
-                    .popups
-                    .track_popup(PopupKind::from(surface))
-                    .unwrap();
-            }
+        // Always try to configure and track the popup, even without a parent
+        // Popups without parents will be in unmapped_popups until they get a parent
+        if let Err(err) = surface.send_configure() {
+            warn!(
+                "Unable to configure popup. {err:?}, parent: {:?}",
+                surface.get_parent_surface().as_ref().map(|s| s.id())
+            );
+        } else {
+            info!("Popup configured successfully, tracking it");
+            self.common
+                .popups
+                .track_popup(PopupKind::from(surface))
+                .unwrap();
         }
     }
 
     fn grab(&mut self, surface: PopupSurface, seat: WlSeat, serial: Serial) {
+        info!(
+            "XdgShellHandler::grab - popup parent: {:?}",
+            surface.get_parent_surface().as_ref().map(|s| s.id())
+        );
         let seat = Seat::from_resource(&seat).unwrap();
         let kind = PopupKind::Xdg(surface);
         let maybe_root = find_popup_root_surface(&kind).ok();
@@ -156,6 +177,13 @@ impl XdgShellHandler for State {
         positioner: PositionerState,
         token: u32,
     ) {
+        info!(
+            "XdgShellHandler::reposition_request - parent: {:?}, geometry: {:?}, token: {}",
+            surface.get_parent_surface().as_ref().map(|s| s.id()),
+            positioner.get_geometry(),
+            token
+        );
+
         surface.with_pending_state(|state| {
             let geometry = positioner.get_geometry();
             state.geometry = geometry;
@@ -167,8 +195,11 @@ impl XdgShellHandler for State {
         if let Err(err) = surface.send_configure() {
             warn!(
                 ?err,
+                parent = ?surface.get_parent_surface().as_ref().map(|s| s.id()),
                 "Client bug: Unable to re-configure repositioned popup.",
             );
+        } else {
+            info!("Popup repositioned successfully");
         }
     }
 
