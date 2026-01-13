@@ -35,7 +35,7 @@ use smithay::{
 };
 use std::collections::HashMap;
 use std::fs;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 
 impl InputMethodHandler for State {
     fn new_popup(&mut self, surface: PopupSurface) {
@@ -110,13 +110,6 @@ impl InputMethodKeyboardMap {
             std::path::PathBuf::from(home)
                 .join(".config/cosmic/com.system76.CosmicComp/v1/input_method_keyboard_map")
         })
-    }
-
-    /// Get the system config path for the input method keyboard map
-    fn get_system_config_path() -> Option<std::path::PathBuf> {
-        Some(std::path::PathBuf::from(
-            "/usr/share/cosmic/com.system76.CosmicComp/v1/input_method_keyboard_map",
-        ))
     }
 
     /// Get the input method app_id for a given keyboard layout

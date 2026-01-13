@@ -825,6 +825,21 @@ fn config_changed(config: cosmic_config::Config, keys: Vec<String>, state: &mut 
                             // Switch input method to match the new keyboard layout
                             sync_input_method_with_layout(state, &seat, &value.layout);
                             info!("config_changed: sync_input_method_with_layout completed");
+
+                            // Send keymap update to IME keyboard grab if one is active
+                            use smithay::wayland::input_method::InputMethodSeat;
+                            let input_method_handle = seat.input_method();
+                            if input_method_handle.keyboard_grabbed() {
+                                info!(
+                                    "IME keyboard grab is active - sending keymap update to grab"
+                                );
+                                input_method_handle.send_keymap_to_grab(&keyboard);
+                                info!("Keymap update sent to IME keyboard grab");
+                            } else {
+                                info!(
+                                    "No active IME keyboard grab, no additional notification needed"
+                                );
+                            }
                         }
 
                         // Press and release the numlock key to update modifiers.
