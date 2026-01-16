@@ -28,7 +28,7 @@ use crate::state::State;
 use serde::{Deserialize, Serialize};
 use smithay::{
     delegate_input_method_manager,
-    desktop::{PopupKind, PopupManager},
+    desktop::{PopupKind, PopupManager, space::SpaceElement},
     reexports::wayland_server::protocol::wl_surface::WlSurface,
     utils::Rectangle,
     wayland::{
