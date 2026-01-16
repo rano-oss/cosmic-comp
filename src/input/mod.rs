@@ -218,6 +218,11 @@ impl State {
                     let time = Event::time_msec(&event);
                     let keyboard = seat.get_keyboard().unwrap();
                     let previous_modifiers = keyboard.modifier_state();
+
+                    // Get the previous layout before processing input
+                    let previous_layout = keyboard
+                        .with_xkb_state(self, |xkb| xkb.xkb().lock().unwrap().active_layout());
+
                     if let Some((action, pattern)) = keyboard
                         .input(
                             self,
@@ -298,6 +303,19 @@ impl State {
                             self.common.config.dynamic_conf.numlock_mut().last_state =
                                 keyboard.modifier_state().num_lock;
                         }
+                    }
+
+                    // Check if the layout changed after processing input
+                    let current_layout = keyboard
+                        .with_xkb_state(self, |xkb| xkb.xkb().lock().unwrap().active_layout());
+
+                    if current_layout != previous_layout {
+                        use crate::wayland::handlers::input_method::sync_input_method_with_layout;
+
+                        // Get the full layout string from config
+                        let layout_string =
+                            self.common.config.cosmic_conf.xkb_config.layout.clone();
+                        sync_input_method_with_layout(self, &seat, &layout_string);
                     }
                 }
             }

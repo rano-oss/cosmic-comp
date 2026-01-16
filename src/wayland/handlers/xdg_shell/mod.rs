@@ -93,10 +93,6 @@ impl XdgShellHandler for State {
     }
 
     fn grab(&mut self, surface: PopupSurface, seat: WlSeat, serial: Serial) {
-        info!(
-            "XdgShellHandler::grab - popup parent: {:?}",
-            surface.get_parent_surface().as_ref().map(|s| s.id())
-        );
         let seat = Seat::from_resource(&seat).unwrap();
         let kind = PopupKind::Xdg(surface);
         let maybe_root = find_popup_root_surface(&kind).ok();
