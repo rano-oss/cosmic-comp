@@ -68,8 +68,6 @@ impl XdgShellHandler for State {
             self.common.shell.read().unconstrain_popup(&surface);
         }
 
-        // Always try to configure and track the popup, even without a parent
-        // Popups without parents will be in unmapped_popups until they get a parent
         if let Err(err) = surface.send_configure() {
             warn!(
                 "Unable to configure popup. {err:?}, parent: {:?}",
