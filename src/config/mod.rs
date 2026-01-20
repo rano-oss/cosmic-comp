@@ -39,7 +39,7 @@ use std::{
     path::PathBuf,
     sync::{Arc, atomic::AtomicBool},
 };
-use tracing::{error, info, warn};
+use tracing::{error, warn};
 
 mod input_config;
 pub mod key_bindings;
@@ -188,19 +188,6 @@ impl Config {
                 }
                 c
             });
-
-        // Log initial XKB config
-        info!(
-            "Loaded initial XKB config: layout='{}', variant='{}', model='{}', options='{}'",
-            cosmic_comp_config.xkb_config.layout,
-            cosmic_comp_config.xkb_config.variant,
-            cosmic_comp_config.xkb_config.model,
-            cosmic_comp_config
-                .xkb_config
-                .options
-                .as_deref()
-                .unwrap_or("none")
-        );
 
         // Listen for updates to the toolkit config
         if let Ok(tk_config) = cosmic_config::Config::new("com.system76.CosmicTk", 1) {
@@ -786,11 +773,9 @@ pub fn change_modifier_state(
 }
 
 fn config_changed(config: cosmic_config::Config, keys: Vec<String>, state: &mut State) {
-    info!("config_changed called with keys: {:?}", keys);
     for key in &keys {
         match key.as_str() {
             "xkb_config" => {
-                info!("config_changed: Processing xkb_config change");
                 let value = get_config::<XkbConfig>(&config, "xkb_config");
                 let seats = state
                     .common
@@ -811,34 +796,13 @@ fn config_changed(config: cosmic_config::Config, keys: Vec<String>, state: &mut 
                             error!(?err, "Failed to load provided xkb config");
                             // TODO Revert to default?
                         } else {
-                            info!(
-                                "Keyboard layout changed to '{}' (variant: '{}', model: '{}', options: '{}')",
-                                value.layout,
-                                value.variant,
-                                value.model,
-                                value.options.as_deref().unwrap_or("none")
-                            );
-                            info!(
-                                "config_changed: Calling sync_input_method_with_layout for layout '{}'",
-                                value.layout
-                            );
-                            // Switch input method to match the new keyboard layout
                             sync_input_method_with_layout(state, &seat, &value.layout);
-                            info!("config_changed: sync_input_method_with_layout completed");
 
                             // Send keymap update to IME keyboard grab if one is active
                             use smithay::wayland::input_method::InputMethodSeat;
                             let input_method_handle = seat.input_method();
                             if input_method_handle.keyboard_grabbed() {
-                                info!(
-                                    "IME keyboard grab is active - sending keymap update to grab"
-                                );
                                 input_method_handle.send_keymap_to_grab(&keyboard);
-                                info!("Keymap update sent to IME keyboard grab");
-                            } else {
-                                info!(
-                                    "No active IME keyboard grab, no additional notification needed"
-                                );
                             }
                         }
 
