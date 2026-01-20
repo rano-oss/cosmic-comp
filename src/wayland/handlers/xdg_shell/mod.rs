@@ -31,7 +31,7 @@ use smithay::{
     },
 };
 use std::cell::Cell;
-use tracing::{info, warn};
+use tracing::warn;
 
 use super::compositor::client_compositor_state;
 
@@ -58,22 +58,14 @@ impl XdgShellHandler for State {
     }
 
     fn new_popup(&mut self, surface: PopupSurface, positioner: PositionerState) {
-        info!(
-            "XdgShellHandler::new_popup - parent: {:?}, geometry: {:?}",
-            surface.get_parent_surface().as_ref().map(|s| s.id()),
-            positioner.get_geometry()
-        );
-
         surface.with_pending_state(|state| {
             state.geometry = positioner.get_geometry();
             state.positioner = positioner;
         });
 
-        // Unconstrain popup if it has a parent
         if surface.get_parent_surface().is_some() {
+            // let other shells deal with their popups
             self.common.shell.read().unconstrain_popup(&surface);
-        } else {
-            info!("Popup created without parent (will be set during grab)");
         }
 
         // Always try to configure and track the popup, even without a parent
@@ -84,7 +76,6 @@ impl XdgShellHandler for State {
                 surface.get_parent_surface().as_ref().map(|s| s.id())
             );
         } else {
-            info!("Popup configured successfully, tracking it");
             self.common
                 .popups
                 .track_popup(PopupKind::from(surface))
@@ -173,13 +164,6 @@ impl XdgShellHandler for State {
         positioner: PositionerState,
         token: u32,
     ) {
-        info!(
-            "XdgShellHandler::reposition_request - parent: {:?}, geometry: {:?}, token: {}",
-            surface.get_parent_surface().as_ref().map(|s| s.id()),
-            positioner.get_geometry(),
-            token
-        );
-
         surface.with_pending_state(|state| {
             let geometry = positioner.get_geometry();
             state.geometry = geometry;
@@ -194,8 +178,6 @@ impl XdgShellHandler for State {
                 parent = ?surface.get_parent_surface().as_ref().map(|s| s.id()),
                 "Client bug: Unable to re-configure repositioned popup.",
             );
-        } else {
-            info!("Popup repositioned successfully");
         }
     }
 

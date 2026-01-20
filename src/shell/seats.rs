@@ -230,7 +230,6 @@ pub fn create_seat(
         )
     })
     .expect("Failed to load xkb configuration files");
-
     seat.add_pointer();
     seat.add_touch();
 
