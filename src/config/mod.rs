@@ -4,8 +4,11 @@ use crate::{
     shell::Shell,
     state::{BackendData, State},
     utils::prelude::OutputExt,
-    wayland::protocols::{
-        output_configuration::OutputConfigurationState, workspace::WorkspaceUpdateGuard,
+    wayland::{
+        handlers::input_method::sync_input_method_with_layout,
+        protocols::{
+            output_configuration::OutputConfigurationState, workspace::WorkspaceUpdateGuard,
+        },
     },
 };
 use anyhow::Context;
@@ -792,6 +795,15 @@ fn config_changed(config: cosmic_config::Config, keys: Vec<String>, state: &mut 
                         if let Err(err) = keyboard.set_xkb_config(state, xkb_config_to_wl(&value)) {
                             error!(?err, "Failed to load provided xkb config");
                             // TODO Revert to default?
+                        } else {
+                            sync_input_method_with_layout(state, &seat, &value.layout);
+
+                            // Send keymap update to IME keyboard grab if one is active
+                            use smithay::wayland::input_method::InputMethodSeat;
+                            let input_method_handle = seat.input_method();
+                            if input_method_handle.keyboard_grabbed() {
+                                input_method_handle.send_keymap_to_grab(&keyboard);
+                            }
                         }
 
                         // Press and release the numlock key to update modifiers.

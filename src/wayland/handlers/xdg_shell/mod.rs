@@ -15,7 +15,10 @@ use smithay::{
     output::Output,
     reexports::{
         wayland_protocols::xdg::shell::server::xdg_toplevel,
-        wayland_server::protocol::{wl_output::WlOutput, wl_seat::WlSeat},
+        wayland_server::{
+            Resource,
+            protocol::{wl_output::WlOutput, wl_seat::WlSeat},
+        },
     },
     utils::{Logical, Point, Serial},
     wayland::{
@@ -63,15 +66,18 @@ impl XdgShellHandler for State {
         if surface.get_parent_surface().is_some() {
             // let other shells deal with their popups
             self.common.shell.read().unconstrain_popup(&surface);
+        }
 
-            if let Err(err) = surface.send_configure() {
-                warn!("Unable to configure popup. {err:?}",);
-            } else {
-                self.common
-                    .popups
-                    .track_popup(PopupKind::from(surface))
-                    .unwrap();
-            }
+        if let Err(err) = surface.send_configure() {
+            warn!(
+                "Unable to configure popup. {err:?}, parent: {:?}",
+                surface.get_parent_surface().as_ref().map(|s| s.id())
+            );
+        } else {
+            self.common
+                .popups
+                .track_popup(PopupKind::from(surface))
+                .unwrap();
         }
     }
 
@@ -167,6 +173,7 @@ impl XdgShellHandler for State {
         if let Err(err) = surface.send_configure() {
             warn!(
                 ?err,
+                parent = ?surface.get_parent_surface().as_ref().map(|s| s.id()),
                 "Client bug: Unable to re-configure repositioned popup.",
             );
         }
