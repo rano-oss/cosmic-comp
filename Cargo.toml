@@ -148,4 +148,12 @@ cosmic-protocols = { git = "https://github.com/pop-os//cosmic-protocols", branch
 cosmic-client-toolkit = { git = "https://github.com/pop-os//cosmic-protocols", branch = "main" }
 
 [patch.crates-io]
-smithay = { path = "../../smithay" }
+smithay = { path = "../smithay" }
+wayland-protocols = { path = "../wayland-rs/wayland-protocols" }
+wayland-protocols-wlr = { path = "../wayland-rs/wayland-protocols-wlr" }
+wayland-protocols-misc = { path = "../wayland-rs/wayland-protocols-misc" }
+wayland-server = { path = "../wayland-rs/wayland-server" }
+wayland-client = { path = "../wayland-rs/wayland-client" }
+wayland-backend = { path = "../wayland-rs/wayland-backend" }
+wayland-scanner = { path = "../wayland-rs/wayland-scanner" }
+wayland-sys = { path = "../wayland-rs/wayland-sys" }

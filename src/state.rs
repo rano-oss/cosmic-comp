@@ -81,6 +81,7 @@ use smithay::{
         idle_inhibit::IdleInhibitManagerState,
         idle_notify::IdleNotifierState,
         input_method::InputMethodManagerState,
+        input_method_v3::InputMethodManagerState as InputMethodV3ManagerState,
         keyboard_shortcuts_inhibit::KeyboardShortcutsInhibitState,
         output::OutputManagerState,
         pointer_constraints::PointerConstraintsState,
@@ -151,6 +152,8 @@ pub struct ClientState {
     pub advertised_drm_node: Option<DrmNode>,
     pub evls: LoopSignal,
     pub security_context: Option<SecurityContext>,
+    /// App ID for input method clients spawned by the compositor.
+    pub input_method_app_id: Option<String>,
 }
 
 impl ClientState {
@@ -596,6 +599,12 @@ fn client_not_sandboxed(client: &Client) -> bool {
         .is_some_and(|client_state| client_state.not_sandboxed())
 }
 
+fn client_is_privileged_ime(client: &Client) -> bool {
+    client
+        .get_data::<ClientState>()
+        .is_some_and(|client_state| client_state.input_method_app_id.is_some())
+}
+
 impl State {
     pub fn new(
         dh: &DisplayHandle,
@@ -645,6 +654,11 @@ impl State {
         TabletManagerState::new::<Self>(dh);
         SecurityContextState::new::<Self, _>(dh, client_has_no_security_context);
         InputMethodManagerState::new::<Self, _>(dh, client_not_sandboxed);
+        InputMethodV3ManagerState::new::<Self, _>(dh, client_is_privileged_ime);
+        smithay::wayland::keyboard_filter::KeyboardFilterManagerState::new::<Self, _>(
+            dh,
+            client_is_privileged_ime,
+        );
         TextInputManagerState::new::<Self>(dh);
         VirtualKeyboardManagerState::new::<State, _>(dh, client_not_sandboxed);
         AlphaModifierState::new::<Self>(dh);
@@ -785,6 +799,7 @@ impl State {
             },
             evls: self.common.event_loop_signal.clone(),
             security_context: None,
+            input_method_app_id: None,
         }
     }
 
@@ -905,6 +920,7 @@ impl Common {
                 surface,
                 output,
                 states,
+                None,
                 render_element_states,
                 primary_scanout_output_compare,
             );

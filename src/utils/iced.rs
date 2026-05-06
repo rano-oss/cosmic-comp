@@ -33,7 +33,7 @@ use ordered_float::OrderedFloat;
 use smithay::{
     backend::{
         allocator::Fourcc,
-        input::{ButtonState, KeyState},
+        input::{ButtonState, KeyEvent},
         renderer::{
             ImportMem, Renderer,
             element::{
@@ -740,7 +740,7 @@ impl<P: Program + Send + 'static> KeyboardTarget<crate::state::State> for IcedEl
         _seat: &Seat<crate::state::State>,
         _data: &mut crate::state::State,
         _key: KeysymHandle<'_>,
-        _state: KeyState,
+        _state: KeyEvent,
         _serial: Serial,
         _time: u32,
     ) {

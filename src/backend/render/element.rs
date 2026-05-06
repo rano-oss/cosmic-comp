@@ -15,7 +15,9 @@ use smithay::{
         glow::{GlowFrame, GlowRenderer},
         utils::{CommitCounter, DamageSet, OpaqueRegions},
     },
-    utils::{Buffer as BufferCoords, Logical, Physical, Point, Rectangle, Scale},
+    utils::{
+        Buffer as BufferCoords, Logical, Physical, Point, Rectangle, Scale, user_data::UserDataMap,
+    },
 };
 
 use super::{GlMultiRenderer, cursor::CursorRenderElement};
@@ -206,14 +208,19 @@ where
         dst: Rectangle<i32, Physical>,
         damage: &[Rectangle<i32, Physical>],
         opaque_regions: &[Rectangle<i32, Physical>],
+        _cache: Option<&UserDataMap>,
     ) -> Result<(), R::Error> {
         match self {
-            CosmicElement::Workspace(elem) => elem.draw(frame, src, dst, damage, opaque_regions),
-            CosmicElement::Cursor(elem) => elem.draw(frame, src, dst, damage, opaque_regions),
-            CosmicElement::Dnd(elem) => elem.draw(frame, src, dst, damage, opaque_regions),
-            CosmicElement::MoveGrab(elem) => elem.draw(frame, src, dst, damage, opaque_regions),
+            CosmicElement::Workspace(elem) => {
+                elem.draw(frame, src, dst, damage, opaque_regions, None)
+            }
+            CosmicElement::Cursor(elem) => elem.draw(frame, src, dst, damage, opaque_regions, None),
+            CosmicElement::Dnd(elem) => elem.draw(frame, src, dst, damage, opaque_regions, None),
+            CosmicElement::MoveGrab(elem) => {
+                elem.draw(frame, src, dst, damage, opaque_regions, None)
+            }
             CosmicElement::AdditionalDamage(elem) => {
-                RenderElement::<R>::draw(elem, frame, src, dst, damage, opaque_regions)
+                RenderElement::<R>::draw(elem, frame, src, dst, damage, opaque_regions, None)
             }
             CosmicElement::Postprocess(elem) => {
                 let glow_frame = R::glow_frame_mut(frame);
@@ -224,10 +231,11 @@ where
                     dst,
                     damage,
                     opaque_regions,
+                    None,
                 )
                 .map_err(FromGlesError::from_gles_error)
             }
-            CosmicElement::Zoom(elem) => elem.draw(frame, src, dst, damage, opaque_regions),
+            CosmicElement::Zoom(elem) => elem.draw(frame, src, dst, damage, opaque_regions, None),
             #[cfg(feature = "debug")]
             CosmicElement::Egui(elem) => {
                 let glow_frame = R::glow_frame_mut(frame);
@@ -238,6 +246,7 @@ where
                     dst,
                     damage,
                     opaque_regions,
+                    None,
                 )
                 .map_err(FromGlesError::from_gles_error)
             }
@@ -415,6 +424,7 @@ impl<R: Renderer> RenderElement<R> for DamageElement {
         _dst: Rectangle<i32, Physical>,
         _damage: &[Rectangle<i32, Physical>],
         _opaque_regions: &[Rectangle<i32, Physical>],
+        _cache: Option<&UserDataMap>,
     ) -> Result<(), R::Error> {
         Ok(())
     }

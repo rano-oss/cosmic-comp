@@ -1263,6 +1263,7 @@ impl FloatingLayout {
                 let Some(toplevel_surface) = (match popup {
                     PopupKind::Xdg(xdg) => get_popup_toplevel(&xdg),
                     PopupKind::InputMethod(_) => unreachable!(),
+                    PopupKind::InputMethodV3(_) => unreachable!(),
                 }) else {
                     return MoveResult::None;
                 };

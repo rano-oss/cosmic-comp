@@ -15,7 +15,7 @@ use calloop::LoopHandle;
 use cosmic::iced::{Color, Task};
 use smithay::{
     backend::{
-        input::KeyState,
+        input::KeyEvent,
         renderer::{
             ImportAll, ImportMem, Renderer,
             element::{
@@ -682,7 +682,7 @@ impl KeyboardTarget<State> for CosmicWindow {
         seat: &Seat<State>,
         data: &mut State,
         key: KeysymHandle<'_>,
-        state: KeyState,
+        state: KeyEvent,
         serial: Serial,
         time: u32,
     ) {

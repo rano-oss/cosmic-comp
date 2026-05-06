@@ -120,7 +120,7 @@ pub fn update_reactive_popups<'a>(
                     }
                 }
             }
-            PopupKind::InputMethod(_) => {}
+            PopupKind::InputMethod(_) | PopupKind::InputMethodV3(_) => {}
         }
     }
 }

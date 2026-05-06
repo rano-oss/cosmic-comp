@@ -629,7 +629,7 @@ impl Config {
             &self.cosmic_conf.input_default
         };
 
-        let mut device_config = self.cosmic_conf.input_devices.get(device.name()).cloned();
+        let mut device_config = self.cosmic_conf.input_devices.get(&*device.name()).cloned();
         if is_touchpad && self.cosmic_conf.input_touchpad_override == TouchpadOverride::ForceDisable
         {
             device_config = Some({
@@ -768,8 +768,8 @@ pub fn change_modifier_state(
         );
     };
 
-    input(smithay_input::KeyState::Pressed, scan_code);
-    input(smithay_input::KeyState::Released, scan_code);
+    input(smithay_input::KeyState::Pressed.into(), scan_code);
+    input(smithay_input::KeyState::Released.into(), scan_code);
 }
 
 fn config_changed(config: cosmic_config::Config, keys: Vec<String>, state: &mut State) {
@@ -797,13 +797,6 @@ fn config_changed(config: cosmic_config::Config, keys: Vec<String>, state: &mut 
                             // TODO Revert to default?
                         } else {
                             sync_input_method_with_layout(state, &seat, &value.layout);
-
-                            // Send keymap update to IME keyboard grab if one is active
-                            use smithay::wayland::input_method::InputMethodSeat;
-                            let input_method_handle = seat.input_method();
-                            if input_method_handle.keyboard_grabbed() {
-                                input_method_handle.send_keymap_to_grab(&keyboard);
-                            }
                         }
 
                         // Press and release the numlock key to update modifiers.

@@ -1735,6 +1735,10 @@ impl Shell {
                         None
                     }
                 }
+                PopupKind::InputMethodV3(popup) => {
+                    let parent = popup.get_parent();
+                    self.element_for_surface(&parent.surface).cloned()
+                }
             }?;
 
             focus_target = KeyboardFocusTarget::Element(new_target);
@@ -3793,6 +3797,7 @@ impl Shell {
                 let Some(toplevel_surface) = (match popup {
                     PopupKind::Xdg(xdg) => get_popup_toplevel(&xdg),
                     PopupKind::InputMethod(_) => unreachable!(),
+                    PopupKind::InputMethodV3(_) => unreachable!(),
                 }) else {
                     return FocusResult::None;
                 };
@@ -4761,6 +4766,7 @@ impl Shell {
                     |surface, _| {
                         surface_presentation_feedback_flags_from_states(
                             surface,
+                            None,
                             render_element_states,
                         )
                     },
@@ -4777,6 +4783,7 @@ impl Shell {
                     |surface, _| {
                         surface_presentation_feedback_flags_from_states(
                             surface,
+                            None,
                             render_element_states,
                         )
                     },
@@ -4790,7 +4797,7 @@ impl Shell {
                 &mut output_presentation_feedback,
                 surface_primary_scanout_output,
                 |surface, _| {
-                    surface_presentation_feedback_flags_from_states(surface, render_element_states)
+                    surface_presentation_feedback_flags_from_states(surface, None, render_element_states)
                 },
             );
         }

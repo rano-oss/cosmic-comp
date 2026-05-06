@@ -227,7 +227,7 @@ impl State {
                         .input(
                             self,
                             keycode,
-                            state,
+                            state.into(),
                             serial,
                             time,
                             |data, modifiers, handle| {
@@ -282,7 +282,7 @@ impl State {
                     {
                         if pattern.key.is_none() && state == KeyState::Released {
                             // we still want to send release-events and not have apps stuck on some modifiers.
-                            keyboard.input(self, keycode, state, serial, time, |_, _, _| {
+                            keyboard.input(self, keycode, state.into(), serial, time, |_, _, _| {
                                 FilterResult::<()>::Forward
                             });
                         }
@@ -1807,7 +1807,7 @@ impl State {
                 keyboard.input(
                     self,
                     event.key_code(),
-                    KeyState::Pressed,
+                    KeyState::Pressed.into(),
                     serial,
                     time,
                     |_, _, _| FilterResult::<()>::Forward,
@@ -1816,7 +1816,7 @@ impl State {
                 keyboard.input(
                     self,
                     event.key_code(),
-                    KeyState::Released,
+                    KeyState::Released.into(),
                     serial,
                     time,
                     |_, _, _| FilterResult::<()>::Forward,

@@ -158,6 +158,8 @@ pub fn init_backend_auto(
                     state.backend.schedule_render(output);
                 }
             }
+            // Eagerly launch all configured input methods
+            crate::wayland::handlers::input_method::launch_all_input_methods(state);
         }
     }
     res

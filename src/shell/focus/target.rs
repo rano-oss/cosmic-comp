@@ -16,7 +16,7 @@ use crate::{
 };
 use id_tree::NodeId;
 use smithay::{
-    backend::input::KeyState,
+    backend::input::{KeyEvent, KeyState},
     desktop::{LayerSurface, PopupKind, WindowSurface, WindowSurfaceType, space::SpaceElement},
     input::{
         Seat,
@@ -659,7 +659,7 @@ impl KeyboardTarget<State> for KeyboardFocusTarget {
         seat: &Seat<State>,
         data: &mut State,
         key: KeysymHandle<'_>,
-        state: KeyState,
+        state: KeyEvent,
         serial: Serial,
         time: u32,
     ) {
