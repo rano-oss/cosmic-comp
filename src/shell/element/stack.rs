@@ -29,7 +29,7 @@ use cosmic_settings_config::shortcuts;
 use shortcuts::action::{Direction, FocusDirection};
 use smithay::{
     backend::{
-        input::KeyEvent,
+        input::KeyState,
         renderer::{
             ImportAll, ImportMem, Renderer,
             element::{
@@ -1307,7 +1307,7 @@ impl KeyboardTarget<State> for CosmicStack {
         seat: &Seat<State>,
         data: &mut State,
         key: KeysymHandle<'_>,
-        state: KeyEvent,
+        state: KeyState,
         serial: Serial,
         time: u32,
     ) {

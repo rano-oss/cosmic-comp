@@ -3,7 +3,6 @@
 use crate::state::{BackendData, State};
 use smithay::{
     backend::allocator::dmabuf::Dmabuf,
-    delegate_dmabuf,
     reexports::wayland_server::Resource,
     wayland::dmabuf::{DmabufGlobal, DmabufHandler, DmabufState, ImportNotifier},
 };
@@ -54,4 +53,3 @@ impl DmabufHandler for State {
     }
 }
 
-delegate_dmabuf!(State);

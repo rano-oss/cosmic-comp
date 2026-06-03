@@ -903,7 +903,7 @@ impl KeyboardTarget<State> for CosmicSurface {
         seat: &Seat<State>,
         data: &mut State,
         key: KeysymHandle<'_>,
-        state: smithay::backend::input::KeyEvent,
+        state: smithay::backend::input::KeyState,
         serial: smithay::utils::Serial,
         time: u32,
     ) {

@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 use crate::state::{ClientState, State};
-use serde::{Deserialize, Serialize};
+use crate::utils::geometry::SizeExt;
+use crate::utils::prelude::OutputExt;
+use cosmic_config::ConfigSet;
 use smithay::{
-    delegate_input_method_manager, delegate_input_method_manager_v3,
+
     desktop::{PopupKind, PopupManager, space::SpaceElement},
     reexports::wayland_server::{Client, DisplayHandle, protocol::wl_surface::WlSurface},
     utils::Rectangle,
@@ -66,15 +68,53 @@ impl InputMethodV3Handler for State {
     fn popup_geometry(
         &self,
         parent: &WlSurface,
-        _cursor: &Rectangle<i32, smithay::utils::Logical>,
-        _positioner: &PositionerState,
+        cursor: &Rectangle<i32, smithay::utils::Logical>,
+        positioner: &PositionerState,
     ) -> Rectangle<i32, smithay::utils::Logical> {
-        self.common
-            .shell
-            .read()
-            .element_for_surface(parent)
-            .map(|e| e.geometry())
-            .unwrap_or_default()
+        let shell = self.common.shell.read();
+
+        // Find the element and its workspace to get the correct output
+        let elem = shell.element_for_surface(parent);
+        let output = elem.and_then(|e| {
+            shell.space_for(e).map(|ws| ws.output.clone()).or_else(|| {
+                shell
+                    .workspaces
+                    .sets
+                    .iter()
+                    .find(|(_, set)| set.sticky_layer.mapped().any(|m| m == e))
+                    .map(|(o, _)| o.clone())
+            })
+        });
+
+        let Some(output) = output else {
+            tracing::warn!(
+                "popup_geometry: no output found for parent, using unconstrained default"
+            );
+            return positioner.get_unconstrained_geometry(*cursor, Rectangle::default());
+        };
+
+        let parent_geo_global = elem
+            .and_then(|e| shell.element_geometry(e))
+            .unwrap_or_default();
+
+        // output.geometry() is in Global coords
+        let output_geo = output.geometry();
+
+        // Target rectangle: the output bounds expressed relative to the parent surface.
+        // Both parent_geo_global and output_geo are in Global coordinates.
+        // The popup position (from positioner) is relative to the parent surface origin,
+        // so we express the output rect in the parent's coordinate system.
+        let target = Rectangle::new(
+            (
+                output_geo.loc.x - parent_geo_global.loc.x,
+                output_geo.loc.y - parent_geo_global.loc.y,
+            )
+                .into(),
+            output_geo.size.as_logical(),
+        );
+        // Use positioner's constraint adjustment (flip_y, slide_x, etc.)
+        let result = positioner.get_unconstrained_geometry(*cursor, target);
+        result
     }
 
     fn parent_geometry(&self, parent: &WlSurface) -> Rectangle<i32, smithay::utils::Logical> {
@@ -91,76 +131,20 @@ impl InputMethodV3Handler for State {
         // Only compositor-launched IMEs (via socketpair) have this field set.
         client_state.input_method_app_id.clone()
     }
-}
 
-delegate_input_method_manager!(State);
-delegate_input_method_manager_v3!(State);
-smithay::delegate_keyboard_filter_manager_v1!(State);
-
-// --- Input method keyboard layout mapping configuration ---
-
-/// Entry in the input method keyboard map: app_id + command to launch
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InputMethodEntry {
-    /// The app_id used to identify this input method
-    pub app_id: String,
-    /// The command to launch the input method
-    pub command: String,
-}
-
-/// Input method keyboard layout mapping configuration.
-///
-/// Maps keyboard layout codes to input method entries.
-/// Stored at `~/.config/cosmic/com.system76.CosmicComp/v1/input_method_keyboard_map`
-///
-/// Format (RON):
-/// ```ron
-/// {
-///     "zh": (app_id: "chewingwl", command: "/usr/bin/chewingwl"),
-///     "jp": (app_id: "fcitx5", command: "/usr/bin/fcitx5"),
-/// }
-/// ```
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct InputMethodKeyboardMap(HashMap<String, InputMethodEntry>);
-
-impl InputMethodKeyboardMap {
-    /// Load the input method keyboard mapping from the cosmic-config directory
-    pub fn load() -> Self {
-        if let Some(config_path) = Self::get_user_config_path() {
-            if let Ok(contents) = fs::read_to_string(&config_path) {
-                match ron::from_str::<HashMap<String, InputMethodEntry>>(&contents) {
-                    Ok(map) => {
-                        return Self(map);
-                    }
-                    Err(err) => {
-                        error!("Failed to parse {:?}: {}", config_path, err);
-                    }
-                }
-            } else {
-                warn!("No input method keyboard map found at {:?}", config_path);
-            }
+    fn input_method_instance_registered(&mut self) {
+        // Sync layout state now that this IME is available
+        let seats: Vec<_> = self.common.shell.read().seats.iter().cloned().collect();
+        let layout = self.common.config.cosmic_conf.xkb_config.layout.clone();
+        for seat in &seats {
+            sync_input_method_with_layout(self, seat, &layout);
         }
-
-        Self(HashMap::new())
-    }
-
-    fn get_user_config_path() -> Option<std::path::PathBuf> {
-        std::env::var("HOME").ok().map(|home| {
-            std::path::PathBuf::from(home)
-                .join(".config/cosmic/com.system76.CosmicComp/v1/input_method_keyboard_map")
-        })
-    }
-
-    /// Get the entry for a given keyboard layout
-    pub fn get_entry(&self, layout: &str) -> Option<&InputMethodEntry> {
-        self.0.get(layout)
-    }
-
-    /// Check if the map is empty
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
     }
 }
+
+
+// Re-export from cosmic-comp-config
+pub use cosmic_comp_config::{InputMethodEntry, InputMethodKeyboardMap};
 
 /// Launch an input method process with an associated app_id.
 ///
@@ -253,10 +237,6 @@ pub fn launch_all_input_methods(state: &mut State) {
             continue;
         }
         launched.insert(entry.app_id.clone());
-        info!(
-            "Eagerly launching IME '{}': {}",
-            entry.app_id, entry.command
-        );
         launch_input_method(state, &entry.app_id, &entry.command);
     }
 }
@@ -298,18 +278,13 @@ pub fn sync_input_method_with_layout(
 
     if let Some(entry) = mapping.get_entry(&active_layout_code) {
         let app_id = &entry.app_id;
-
-        // Try to set the corresponding input method as active
         if input_method_handle.set_active_instance(app_id) {
-            info!(
-                "sync_input_method_with_layout: set active instance to '{}'",
-                app_id
-            );
             // Only activate (and install interceptor) if a text_input client has enabled.
             // Otherwise, just setting the active instance is enough — the interceptor will
             // be activated later when the client sends text_input enable+commit.
             let text_input = seat.text_input();
-            if text_input.has_active_text_input() {
+            let has_active = text_input.has_active_text_input();
+            if has_active {
                 if let Some(keyboard) = seat.get_keyboard() {
                     if let Some(focus) = keyboard.current_focus() {
                         use smithay::wayland::seat::WaylandFocus;
@@ -327,7 +302,6 @@ pub fn sync_input_method_with_layout(
             );
         }
     } else {
-        // No mapping for this layout - clear active instance
         input_method_handle.clear_active_instance(state);
     }
 }

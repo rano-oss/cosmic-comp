@@ -152,6 +152,7 @@ smithay = { path = "../smithay" }
 wayland-protocols = { path = "../wayland-rs/wayland-protocols" }
 wayland-protocols-wlr = { path = "../wayland-rs/wayland-protocols-wlr" }
 wayland-protocols-misc = { path = "../wayland-rs/wayland-protocols-misc" }
+wayland-protocols-experimental = { path = "../wayland-rs/wayland-protocols-experimental" }
 wayland-server = { path = "../wayland-rs/wayland-server" }
 wayland-client = { path = "../wayland-rs/wayland-client" }
 wayland-backend = { path = "../wayland-rs/wayland-backend" }

@@ -2,7 +2,6 @@
 
 use crate::state::State;
 use smithay::{
-    delegate_pointer_constraints,
     input::pointer::PointerHandle,
     reexports::wayland_server::protocol::wl_surface::WlSurface,
     utils::{Logical, Point},
@@ -25,6 +24,10 @@ impl PointerConstraintsHandler for State {
         }
     }
 
+    fn remove_constraint(&mut self, _surface: &WlSurface, _pointer: &PointerHandle<Self>) {
+        // TODO
+    }
+
     fn cursor_position_hint(
         &mut self,
         _surface: &WlSurface,
@@ -34,4 +37,3 @@ impl PointerConstraintsHandler for State {
         // TODO
     }
 }
-delegate_pointer_constraints!(State);

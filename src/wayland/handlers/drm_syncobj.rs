@@ -2,7 +2,6 @@
 
 use crate::state::{BackendData, State};
 use smithay::{
-    delegate_drm_syncobj,
     wayland::drm_syncobj::{DrmSyncobjHandler, DrmSyncobjState},
 };
 
@@ -16,4 +15,3 @@ impl DrmSyncobjHandler for State {
     }
 }
 
-delegate_drm_syncobj!(State);

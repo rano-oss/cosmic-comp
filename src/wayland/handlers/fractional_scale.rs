@@ -1,6 +1,5 @@
 use crate::{state::State, utils::prelude::SeatExt};
 use smithay::{
-    delegate_fractional_scale,
     desktop::utils::surface_primary_scanout_output,
     reexports::wayland_server::protocol::wl_surface::WlSurface,
     wayland::{
@@ -56,4 +55,3 @@ impl FractionalScaleHandler for State {
     }
 }
 
-delegate_fractional_scale!(State);

@@ -3,7 +3,6 @@
 use crate::state::State;
 use smithay::{
     backend::drm::DrmNode,
-    delegate_drm_lease,
     wayland::drm_lease::{
         DrmLease, DrmLeaseBuilder, DrmLeaseHandler, DrmLeaseRequest, DrmLeaseState, LeaseRejected,
     },
@@ -135,4 +134,3 @@ impl DrmLeaseHandler for State {
     }
 }
 
-delegate_drm_lease!(State);

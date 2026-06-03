@@ -2,7 +2,6 @@
 
 use crate::state::State;
 use smithay::{
-    delegate_xwayland_shell,
     wayland::xwayland_shell::{XWaylandShellHandler, XWaylandShellState},
 };
 
@@ -12,4 +11,3 @@ impl XWaylandShellHandler for State {
     }
 }
 
-delegate_xwayland_shell!(State);

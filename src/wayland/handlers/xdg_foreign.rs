@@ -2,7 +2,6 @@
 
 use crate::state::State;
 use smithay::{
-    delegate_xdg_foreign,
     wayland::xdg_foreign::{XdgForeignHandler, XdgForeignState},
 };
 
@@ -12,4 +11,3 @@ impl XdgForeignHandler for State {
     }
 }
 
-delegate_xdg_foreign!(State);

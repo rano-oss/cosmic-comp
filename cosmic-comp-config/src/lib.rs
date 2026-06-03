@@ -215,3 +215,70 @@ pub enum XwaylandDescaling {
     #[default]
     Fractional,
 }
+
+// --- Input method keyboard layout mapping ---
+
+/// Entry in the input method keyboard map: app_id + command to launch
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InputMethodEntry {
+    /// The app_id used to identify this input method
+    pub app_id: String,
+    /// The command to launch the input method
+    pub command: String,
+    /// Display label for the keyboard layout indicator (e.g. "ㄅ" for Bopomofo)
+    #[serde(default)]
+    pub label: String,
+}
+
+/// Input method keyboard layout mapping configuration.
+///
+/// Maps keyboard layout codes to input method entries.
+/// Stored at `~/.config/cosmic/com.system76.CosmicComp/v1/input_method_keyboard_map`
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InputMethodKeyboardMap(pub HashMap<String, InputMethodEntry>);
+
+impl InputMethodKeyboardMap {
+    /// Load the input method keyboard mapping from the cosmic-config directory
+    pub fn load() -> Self {
+        if let Some(config_path) = Self::config_path() {
+            if let Ok(contents) = std::fs::read_to_string(&config_path) {
+                match ron::from_str::<HashMap<String, InputMethodEntry>>(&contents) {
+                    Ok(map) => return Self(map),
+                    Err(err) => {
+                        tracing::error!("Failed to parse {:?}: {}", config_path, err);
+                    }
+                }
+            }
+        }
+        Self(HashMap::new())
+    }
+
+    /// Get the config file path
+    pub fn config_path() -> Option<std::path::PathBuf> {
+        std::env::var("HOME").ok().map(|home| {
+            std::path::PathBuf::from(home)
+                .join(".config/cosmic/com.system76.CosmicComp/v1/input_method_keyboard_map")
+        })
+    }
+
+    /// Get the entry for a given keyboard layout
+    pub fn get_entry(&self, layout: &str) -> Option<&InputMethodEntry> {
+        self.0.get(layout)
+    }
+
+    /// Get the display label for a layout (if it has an IME mapping with a label)
+    pub fn get_label(&self, layout: &str) -> Option<&str> {
+        self.0.get(layout).and_then(|e| {
+            if e.label.is_empty() {
+                None
+            } else {
+                Some(e.label.as_str())
+            }
+        })
+    }
+
+    /// Check if the map is empty
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}

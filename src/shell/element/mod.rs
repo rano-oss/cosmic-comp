@@ -7,7 +7,7 @@ use calloop::LoopHandle;
 use id_tree::NodeId;
 use smithay::{
     backend::{
-        input::KeyEvent,
+        input::KeyState,
         renderer::{
             ImportAll, ImportMem, Renderer,
             element::{
@@ -917,7 +917,7 @@ impl KeyboardTarget<State> for CosmicMapped {
         seat: &Seat<State>,
         data: &mut State,
         key: KeysymHandle<'_>,
-        state: KeyEvent,
+        state: KeyState,
         serial: Serial,
         time: u32,
     ) {

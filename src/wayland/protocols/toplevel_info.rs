@@ -5,7 +5,10 @@ use std::{collections::HashSet, sync::Mutex};
 use smithay::{
     output::Output,
     reexports::{
-        wayland_protocols::ext::foreign_toplevel_list::v1::server::ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
+        wayland_protocols::ext::foreign_toplevel_list::v1::server::{
+            ext_foreign_toplevel_handle_v1::ExtForeignToplevelHandleV1,
+            ext_foreign_toplevel_list_v1::ExtForeignToplevelListV1,
+        },
         wayland_server::{
             Client, DataInit, Dispatch, DisplayHandle, GlobalDispatch, New, Resource, Weak,
             backend::{ClientId, GlobalId},
@@ -14,7 +17,8 @@ use smithay::{
     },
     utils::{IsAlive, Logical, Rectangle, user_data::UserDataMap},
     wayland::foreign_toplevel_list::{
-        ForeignToplevelHandle, ForeignToplevelListHandler, ForeignToplevelListState,
+        ForeignToplevelHandle, ForeignToplevelListGlobalData, ForeignToplevelListHandler,
+        ForeignToplevelListState,
     },
 };
 
@@ -310,6 +314,8 @@ where
     pub fn new<F>(dh: &DisplayHandle, client_filter: F) -> ToplevelInfoState<D, W>
     where
         F: for<'a> Fn(&'a Client) -> bool + Send + Sync + Clone + 'static,
+        D: GlobalDispatch<ExtForeignToplevelListV1, ForeignToplevelListGlobalData>
+            + Dispatch<ExtForeignToplevelHandleV1, ForeignToplevelHandle>,
     {
         let global = dh.create_global::<D, ZcosmicToplevelInfoV1, _>(
             3,
@@ -331,7 +337,11 @@ where
         }
     }
 
-    pub fn new_toplevel(&mut self, toplevel: &W, workspace_state: &WorkspaceState<D>) {
+    pub fn new_toplevel(&mut self, toplevel: &W, workspace_state: &WorkspaceState<D>)
+    where
+        D: GlobalDispatch<ExtForeignToplevelListV1, ForeignToplevelListGlobalData>
+            + Dispatch<ExtForeignToplevelHandleV1, ForeignToplevelHandle>,
+    {
         let toplevel_handle = self
             .foreign_toplevel_list
             .new_toplevel::<D>(toplevel.title(), toplevel.app_id());

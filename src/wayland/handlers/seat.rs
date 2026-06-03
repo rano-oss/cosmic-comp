@@ -7,7 +7,6 @@ use crate::{
     utils::prelude::SeatExt,
 };
 use smithay::{
-    delegate_cursor_shape, delegate_seat,
     input::{SeatHandler, SeatState, keyboard::LedState, pointer::CursorImageStatus},
 };
 
@@ -38,5 +37,3 @@ impl SeatHandler for State {
     }
 }
 
-delegate_seat!(State);
-delegate_cursor_shape!(State);

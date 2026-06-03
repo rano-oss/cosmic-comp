@@ -11,4 +11,3 @@ impl ForeignToplevelListHandler for State {
     }
 }
 
-smithay::delegate_foreign_toplevel_list!(State);

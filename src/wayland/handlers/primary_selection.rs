@@ -2,7 +2,6 @@
 
 use crate::state::State;
 use smithay::{
-    delegate_primary_selection,
     wayland::selection::primary_selection::{PrimarySelectionHandler, PrimarySelectionState},
 };
 
@@ -12,4 +11,3 @@ impl PrimarySelectionHandler for State {
     }
 }
 
-delegate_primary_selection!(State);

@@ -2,7 +2,6 @@
 
 use crate::{state::State, utils::prelude::SeatExt};
 use smithay::{
-    delegate_data_device,
     input::{
         Seat,
         dnd::{DnDGrab, DndGrabHandler, DndTarget, GrabType},
@@ -136,4 +135,3 @@ impl DataDeviceHandler for State {
     }
 }
 
-delegate_data_device!(State);

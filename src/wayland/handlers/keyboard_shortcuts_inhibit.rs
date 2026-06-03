@@ -2,7 +2,6 @@
 
 use crate::state::State;
 use smithay::{
-    delegate_keyboard_shortcuts_inhibit,
     wayland::keyboard_shortcuts_inhibit::{
         KeyboardShortcutsInhibitHandler, KeyboardShortcutsInhibitState, KeyboardShortcutsInhibitor,
     },
@@ -19,4 +18,3 @@ impl KeyboardShortcutsInhibitHandler for State {
     }
 }
 
-delegate_keyboard_shortcuts_inhibit!(State);

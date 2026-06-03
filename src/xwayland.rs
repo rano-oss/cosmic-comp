@@ -14,7 +14,7 @@ use smithay::{
     backend::{
         allocator::Fourcc,
         drm::DrmNode,
-        input::{ButtonState, KeyEvent, KeyState, Keycode},
+        input::{ButtonState, KeyState, Keycode},
         renderer::{
             Bind, Frame, Offscreen, Renderer,
             element::{
@@ -336,7 +336,7 @@ impl Common {
         xstate.last_modifier_state.take();
         for key in xstate.pressed_keys.drain(..).rev() {
             for wl_keyboard in keyboard.client_keyboards(&xstate.client) {
-                wl_keyboard.key(serial.into(), 0, key.raw() - 8, KeyEvent::Released.into());
+                wl_keyboard.key(serial.into(), 0, key.raw() - 8, KeyState::Released.into());
             }
         }
         for button in xstate.pressed_buttons.drain(..).rev() {
@@ -420,7 +420,7 @@ impl Common {
                 serial.into(),
                 time,
                 code.raw() - 8,
-                KeyEvent::from(state).into(),
+                KeyState::from(state).into(),
             );
             if xstate.last_modifier_state != Some(modifiers) {
                 xstate.last_modifier_state = Some(modifiers);

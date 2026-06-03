@@ -1,6 +1,6 @@
 use cosmic_settings_config::shortcuts;
 use smithay::{
-    backend::input::{KeyEvent, KeyState, Keycode},
+    backend::input::{KeyState, Keycode},
     input::{
         Seat, SeatHandler,
         keyboard::{
@@ -34,7 +34,7 @@ impl KeyboardGrab<State> for SwapWindowGrab {
         data: &mut State,
         handle: &mut KeyboardInnerHandle<'_, State>,
         keycode: Keycode,
-        state: KeyEvent,
+        state: KeyState,
         modifiers: Option<ModifiersState>,
         serial: Serial,
         time: u32,
@@ -45,7 +45,7 @@ impl KeyboardGrab<State> for SwapWindowGrab {
             return;
         }
 
-        if state == KeyEvent::Released {
+        if state == KeyState::Released {
             return;
         }
 

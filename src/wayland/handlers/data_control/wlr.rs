@@ -2,7 +2,6 @@
 
 use crate::state::State;
 use smithay::{
-    delegate_data_control,
     wayland::selection::wlr_data_control::{DataControlHandler, DataControlState},
 };
 
@@ -12,4 +11,3 @@ impl DataControlHandler for State {
     }
 }
 
-delegate_data_control!(State);
