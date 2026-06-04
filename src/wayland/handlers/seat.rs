@@ -6,9 +6,7 @@ use crate::{
     state::State,
     utils::prelude::SeatExt,
 };
-use smithay::{
-    input::{SeatHandler, SeatState, keyboard::LedState, pointer::CursorImageStatus},
-};
+use smithay::input::{SeatHandler, SeatState, keyboard::LedState, pointer::CursorImageStatus};
 
 impl SeatHandler for State {
     type KeyboardFocus = KeyboardFocusTarget;
@@ -35,5 +33,8 @@ impl SeatHandler for State {
         let devices = userdata.get::<Devices>().unwrap();
         devices.update_led_state(led_state);
     }
-}
 
+    fn loop_handle(&self) -> Option<smithay::reexports::calloop::LoopHandle<'static, Self>> {
+        Some(self.common.event_loop_handle.clone())
+    }
+}

@@ -68,7 +68,7 @@ use smithay::{
         tablet_manager::{TabletDescriptor, TabletSeatTrait},
     },
 };
-use tracing::{error, trace, warn};
+use tracing::{error, info, trace, warn};
 use xkbcommon::xkb::{Keycode, Keysym};
 
 use std::{
@@ -207,16 +207,21 @@ impl State {
                     .seats
                     .for_device(&event.device())
                     .cloned();
+                if maybe_seat.is_none() {
+                    info!("Keyboard event received but no seat found for device");
+                }
                 if let Some(seat) = maybe_seat {
                     self.common.idle_notifier_state.notify_activity(&seat);
 
                     let keycode = event.key_code();
                     let state = event.state();
-                    trace!(?keycode, ?state, "key");
+                    info!(?keycode, ?state, "key event from backend");
 
                     let serial = SERIAL_COUNTER.next_serial();
                     let time = Event::time_msec(&event);
                     let keyboard = seat.get_keyboard().unwrap();
+                    let current_focus = keyboard.current_focus();
+                    info!(?current_focus, "keyboard focus before input");
                     let previous_modifiers = keyboard.modifier_state();
 
                     // Get the previous layout before processing input
@@ -309,6 +314,7 @@ impl State {
                     let current_layout = keyboard
                         .with_xkb_state(self, |xkb| xkb.xkb().lock().unwrap().active_layout());
 
+                    info!(?previous_layout, ?current_layout, "layout check after key");
                     if current_layout != previous_layout {
                         use crate::wayland::handlers::input_method::sync_input_method_with_layout;
 

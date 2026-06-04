@@ -16,6 +16,7 @@ use cosmic_config::{ConfigGet, CosmicConfigEntry};
 use cosmic_settings_config::window_rules::ApplicationException;
 use cosmic_settings_config::{Shortcuts, shortcuts, window_rules};
 use serde::{Deserialize, Serialize};
+use smithay::input::keyboard::Layout;
 use smithay::utils::{Clock, Monotonic};
 use smithay::wayland::xdg_activation::XdgActivationState;
 pub use smithay::{
@@ -878,6 +879,32 @@ fn config_changed(config: cosmic_config::Config, keys: Vec<String>, state: &mut 
                 if new != state.common.config.cosmic_conf.active_hint {
                     state.common.config.cosmic_conf.active_hint = new;
                     state.common.update_config();
+                }
+            }
+            "active_layout" => {
+                let active_layout: String = get_config(&config, "active_layout");
+                if !active_layout.is_empty() {
+                    // Switch the XKB layout group to match the new active layout
+                    let layout_string = state.common.config.cosmic_conf.xkb_config.layout.clone();
+                    let layouts: Vec<&str> = layout_string.split(',').collect();
+                    if let Some(idx) = layouts
+                        .iter()
+                        .position(|l| l.trim() == active_layout.trim())
+                    {
+                        let seats: Vec<_> =
+                            state.common.shell.read().seats.iter().cloned().collect();
+                        for seat in &seats {
+                            if let Some(keyboard) = seat.get_keyboard() {
+                                keyboard.with_xkb_state(state, |mut xkb| {
+                                    let current = xkb.xkb().lock().unwrap().active_layout();
+                                    if current.0 as usize != idx {
+                                        xkb.set_layout(Layout(idx as u32));
+                                    }
+                                });
+                            }
+                            sync_input_method_with_layout(state, seat, &layout_string);
+                        }
+                    }
                 }
             }
             "descale_xwayland" => {

@@ -3,9 +3,7 @@
 use crate::state::{ClientState, State};
 use crate::utils::geometry::SizeExt;
 use crate::utils::prelude::OutputExt;
-use cosmic_config::ConfigSet;
 use smithay::{
-
     desktop::{PopupKind, PopupManager, space::SpaceElement},
     reexports::wayland_server::{Client, DisplayHandle, protocol::wl_surface::WlSurface},
     utils::Rectangle,
@@ -17,14 +15,12 @@ use smithay::{
         },
     },
 };
-use std::collections::HashMap;
-use std::fs;
 use std::os::unix::io::AsRawFd;
 use std::os::unix::net::UnixStream;
 use std::os::unix::process::CommandExt;
 use std::process::Command;
 use std::sync::Arc;
-use tracing::{error, info, warn};
+use tracing::{error, warn};
 
 impl InputMethodHandler for State {
     fn new_popup(&mut self, surface: PopupSurface) {
@@ -142,7 +138,6 @@ impl InputMethodV3Handler for State {
     }
 }
 
-
 // Re-export from cosmic-comp-config
 pub use cosmic_comp_config::{InputMethodEntry, InputMethodKeyboardMap};
 
@@ -205,16 +200,9 @@ pub fn launch_input_method(state: &mut State, app_id: &str, command: &str) {
         });
     }
     match cmd.spawn() {
-        Ok(child) => {
-            info!(
-                "Launched IME '{}' (pid: {}) with command: {}",
-                app_id,
-                child.id(),
-                command
-            );
-        }
+        Ok(_child) => {}
         Err(err) => {
-            error!("Failed to spawn IME '{}' ({}): {}", app_id, command, err);
+            warn!("Failed to spawn IME '{}' ({}): {}", app_id, command, err);
         }
     }
 
@@ -279,9 +267,6 @@ pub fn sync_input_method_with_layout(
     if let Some(entry) = mapping.get_entry(&active_layout_code) {
         let app_id = &entry.app_id;
         if input_method_handle.set_active_instance(app_id) {
-            // Only activate (and install interceptor) if a text_input client has enabled.
-            // Otherwise, just setting the active instance is enough — the interceptor will
-            // be activated later when the client sends text_input enable+commit.
             let text_input = seat.text_input();
             let has_active = text_input.has_active_text_input();
             if has_active {
