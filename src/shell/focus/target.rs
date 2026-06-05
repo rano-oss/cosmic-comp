@@ -21,7 +21,7 @@ use smithay::{
     input::{
         Seat,
         dnd::{DndFocus, OfferData, Source},
-        keyboard::{KeyboardTarget, KeysymHandle, ModifiersState},
+        keyboard::{KeyboardTarget, Keycode, KeysymHandle, ModifiersState},
         pointer::{
             AxisFrame, ButtonEvent, GestureHoldBeginEvent, GestureHoldEndEvent,
             GesturePinchBeginEvent, GesturePinchEndEvent, GesturePinchUpdateEvent,
@@ -676,6 +676,18 @@ impl KeyboardTarget<State> for KeyboardFocusTarget {
     ) {
         if let Some(inner) = self.inner_keyboard_target() {
             inner.modifiers(seat, data, modifiers, serial);
+        }
+    }
+    fn repeat(
+        &self,
+        seat: &Seat<State>,
+        data: &mut State,
+        keycode: Keycode,
+        serial: Serial,
+        time: u32,
+    ) {
+        if let Some(inner) = self.inner_keyboard_target() {
+            inner.repeat(seat, data, keycode, serial, time);
         }
     }
     fn replace(
