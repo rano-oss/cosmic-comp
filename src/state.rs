@@ -856,8 +856,6 @@ impl State {
                                             );
                                         }
                                     }
-
-                                    smithay::delegate_dispatch2!(State);
                                 } else {
                                     // Disabling an output should never fail.
                                     error!("Unrecoverable output configuration error: {}", err);
@@ -1384,3 +1382,5 @@ impl Common {
         }
     }
 }
+
+smithay::delegate_dispatch2!(State);
