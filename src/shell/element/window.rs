@@ -27,7 +27,7 @@ use smithay::{
     desktop::{WindowSurfaceType, space::SpaceElement},
     input::{
         Seat,
-        keyboard::{KeyboardTarget, Keycode, KeysymHandle, ModifiersState},
+        keyboard::{KeyboardTarget, KeysymHandle, ModifiersState},
         pointer::{
             AxisFrame, ButtonEvent, CursorIcon, CursorImageStatus, GestureHoldBeginEvent,
             GestureHoldEndEvent, GesturePinchBeginEvent, GesturePinchEndEvent,
@@ -698,17 +698,6 @@ impl KeyboardTarget<State> for CosmicWindow {
     ) {
         self.0
             .with_program(|p| KeyboardTarget::modifiers(&p.window, seat, data, modifiers, serial))
-    }
-    fn repeat(
-        &self,
-        seat: &Seat<State>,
-        data: &mut State,
-        keycode: Keycode,
-        serial: Serial,
-        time: u32,
-    ) {
-        self.0
-            .with_program(|p| KeyboardTarget::repeat(&p.window, seat, data, keycode, serial, time))
     }
 }
 

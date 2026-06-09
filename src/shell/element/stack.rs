@@ -41,7 +41,7 @@ use smithay::{
     desktop::{WindowSurfaceType, space::SpaceElement},
     input::{
         Seat,
-        keyboard::{KeyboardTarget, Keycode, KeysymHandle, ModifiersState},
+        keyboard::{KeyboardTarget, KeysymHandle, ModifiersState},
         pointer::{
             AxisFrame, ButtonEvent, CursorImageStatus, GestureHoldBeginEvent, GestureHoldEndEvent,
             GesturePinchBeginEvent, GesturePinchEndEvent, GesturePinchUpdateEvent,
@@ -1342,28 +1342,6 @@ impl KeyboardTarget<State> for CosmicStack {
                     data,
                     modifiers,
                     serial,
-                )
-            }
-        })
-    }
-    fn repeat(
-        &self,
-        seat: &Seat<State>,
-        data: &mut State,
-        keycode: Keycode,
-        serial: Serial,
-        time: u32,
-    ) {
-        let active = self.keyboard_leave_if_previous(seat, data, serial);
-        self.0.with_program(|p| {
-            if !p.group_focused.load(Ordering::SeqCst) {
-                KeyboardTarget::repeat(
-                    &p.windows.lock().unwrap()[active],
-                    seat,
-                    data,
-                    keycode,
-                    serial,
-                    time,
                 )
             }
         })

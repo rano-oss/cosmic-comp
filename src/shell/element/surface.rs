@@ -25,7 +25,7 @@ use smithay::{
     },
     input::{
         Seat,
-        keyboard::{KeyboardTarget, Keycode, KeysymHandle, ModifiersState},
+        keyboard::{KeyboardTarget, KeysymHandle, ModifiersState},
     },
     output::Output,
     reexports::{
@@ -930,23 +930,6 @@ impl KeyboardTarget<State> for CosmicSurface {
             }
             WindowSurface::X11(x11) => {
                 KeyboardTarget::modifiers(x11, seat, data, modifiers, serial)
-            }
-        }
-    }
-    fn repeat(
-        &self,
-        seat: &Seat<State>,
-        data: &mut State,
-        keycode: Keycode,
-        serial: smithay::utils::Serial,
-        time: u32,
-    ) {
-        match self.0.underlying_surface() {
-            WindowSurface::Wayland(toplevel) => {
-                KeyboardTarget::repeat(toplevel.wl_surface(), seat, data, keycode, serial, time)
-            }
-            WindowSurface::X11(x11) => {
-                KeyboardTarget::repeat(x11, seat, data, keycode, serial, time)
             }
         }
     }

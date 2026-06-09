@@ -23,7 +23,7 @@ use smithay::{
     desktop::{WindowSurfaceType, space::SpaceElement},
     input::{
         Seat,
-        keyboard::{KeyboardTarget, Keycode, KeysymHandle, ModifiersState},
+        keyboard::{KeyboardTarget, KeysymHandle, ModifiersState},
     },
     output::Output,
     reexports::wayland_server::{backend::ObjectId, protocol::wl_surface::WlSurface},
@@ -944,24 +944,6 @@ impl KeyboardTarget<State> for CosmicMapped {
             }
             CosmicMappedInternal::Window(w) => {
                 KeyboardTarget::modifiers(w, seat, data, modifiers, serial)
-            }
-            _ => {}
-        }
-    }
-    fn repeat(
-        &self,
-        seat: &Seat<State>,
-        data: &mut State,
-        keycode: Keycode,
-        serial: Serial,
-        time: u32,
-    ) {
-        match &self.element {
-            CosmicMappedInternal::Stack(s) => {
-                KeyboardTarget::repeat(s, seat, data, keycode, serial, time)
-            }
-            CosmicMappedInternal::Window(w) => {
-                KeyboardTarget::repeat(w, seat, data, keycode, serial, time)
             }
             _ => {}
         }
