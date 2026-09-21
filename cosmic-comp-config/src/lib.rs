@@ -112,6 +112,9 @@ pub struct CosmicCompConfig {
     pub cursor_shake_to_find: bool,
     pub activation_policy: ActivationPolicy,
     pub decoration_preference: DecorationPreference,
+    pub active_layout: String,
+    /// XKB layout code → input method (app_id / command / label).
+    pub input_method_map: HashMap<String, InputMethodEntry>,
 }
 
 impl Default for CosmicCompConfig {
@@ -152,6 +155,8 @@ impl Default for CosmicCompConfig {
             cursor_shake_to_find: true,
             activation_policy: ActivationPolicy::default(),
             decoration_preference: DecorationPreference::default(),
+            active_layout: String::new(),
+            input_method_map: HashMap::new(),
         }
     }
 }
@@ -262,4 +267,12 @@ pub enum XwaylandDescaling {
     Disabled,
     #[default]
     Fractional,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InputMethodEntry {
+    pub app_id: String,
+    pub command: String,
+    #[serde(default)]
+    pub label: String,
 }

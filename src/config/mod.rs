@@ -5,8 +5,13 @@ use crate::{
     shell::Shell,
     state::{BackendData, State},
     utils::prelude::OutputExt,
-    wayland::protocols::{
-        output_configuration::OutputConfigurationState, workspace::WorkspaceUpdateGuard,
+    wayland::{
+        handlers::input_method::{
+            apply_saved_active_layout, sync_input_method_with_layout, sync_input_methods_all_seats,
+        },
+        protocols::{
+            output_configuration::OutputConfigurationState, workspace::WorkspaceUpdateGuard,
+        },
     },
 };
 use anyhow::Context;
@@ -824,6 +829,8 @@ fn config_changed(config: cosmic_config::Config, keys: Vec<String>, state: &mut 
                         if let Err(err) = keyboard.set_xkb_config(state, xkb_config_to_wl(&value)) {
                             error!(?err, "Failed to load provided xkb config");
                             // TODO Revert to default?
+                        } else {
+                            sync_input_method_with_layout(state, &seat, &value.layout);
                         }
 
                         // Press and release the numlock key to update modifiers.
@@ -929,6 +936,16 @@ fn config_changed(config: cosmic_config::Config, keys: Vec<String>, state: &mut 
                     state.common.config.cosmic_conf.active_hint = new;
                     state.common.update_config();
                 }
+            }
+            "active_layout" => {
+                state.common.config.cosmic_conf.active_layout =
+                    get_config(&config, "active_layout");
+                apply_saved_active_layout(state);
+            }
+            "input_method_map" => {
+                state.common.config.cosmic_conf.input_method_map =
+                    get_config(&config, "input_method_map");
+                sync_input_methods_all_seats(state);
             }
             "descale_xwayland" => {
                 let new = get_config::<XwaylandDescaling>(&config, "descale_xwayland");

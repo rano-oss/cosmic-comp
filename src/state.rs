@@ -707,7 +707,14 @@ impl State {
         PointerGesturesState::new::<Self>(dh);
         TabletManagerState::new::<Self>(dh);
         SecurityContextState::new::<Self, _>(dh, client_has_no_security_context);
-        InputMethodManagerState::new::<Self, _>(dh, client_not_sandboxed);
+        InputMethodManagerState::new::<Self, _>(
+            dh,
+            crate::wayland::handlers::input_method::is_privileged_ime_client,
+        );
+        smithay::wayland::keyboard_filter::KeyboardFilterManagerState::new::<Self, _>(
+            dh,
+            crate::wayland::handlers::input_method::is_privileged_ime_client,
+        );
         TextInputManagerState::new::<Self>(dh);
         VirtualKeyboardManagerState::new::<State, _>(dh, client_not_sandboxed);
         AlphaModifierState::new::<Self>(dh);

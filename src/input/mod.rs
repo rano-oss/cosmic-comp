@@ -289,6 +289,9 @@ impl State {
                     let time = Event::time(&event);
                     let keyboard = seat.get_keyboard().unwrap();
                     let previous_modifiers = keyboard.modifier_state();
+                    let previous_layout = keyboard
+                        .with_xkb_state(self, |xkb| xkb.xkb().lock().unwrap().active_layout());
+
                     if let Some((action, pattern)) = keyboard
                         .input(
                             self,
@@ -334,6 +337,33 @@ impl State {
                             // `PersistenceGuard` will write to a file when it's dropped here.
                             self.common.config.dynamic_conf.numlock_mut().last_state =
                                 keyboard.modifier_state().num_lock;
+                        }
+                    }
+
+                    let current_layout = keyboard
+                        .with_xkb_state(self, |xkb| xkb.xkb().lock().unwrap().active_layout());
+                    if current_layout != previous_layout {
+                        use crate::wayland::handlers::input_method::sync_input_method_with_layout;
+                        use cosmic_config::ConfigSet;
+
+                        let layout_string =
+                            self.common.config.cosmic_conf.xkb_config.layout.clone();
+                        sync_input_method_with_layout(self, &seat, &layout_string);
+
+                        if let Some(code) = layout_string
+                            .split(',')
+                            .map(str::trim)
+                            .nth(current_layout.0 as usize)
+                        {
+                            let code = code.to_string();
+                            if self.common.config.cosmic_conf.active_layout != code {
+                                self.common.config.cosmic_conf.active_layout = code.clone();
+                                if let Err(err) =
+                                    self.common.config.cosmic_helper.set("active_layout", &code)
+                                {
+                                    error!(?err, "Failed to write active_layout");
+                                }
+                            }
                         }
                     }
                 }
