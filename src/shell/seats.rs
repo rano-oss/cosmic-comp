@@ -259,6 +259,9 @@ pub fn create_seat(
         )
     })
     .expect("Failed to load xkb configuration files");
+    if let Some(keyboard) = seat.get_keyboard() {
+        keyboard.set_compositor_owned_repeat(true);
+    }
     seat.add_pointer();
     seat.add_touch();
 

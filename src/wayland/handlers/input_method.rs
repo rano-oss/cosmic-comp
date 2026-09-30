@@ -11,9 +11,7 @@ use smithay::{
     output::Output,
     reexports::wayland_server::{Client, DisplayHandle, protocol::wl_surface::WlSurface},
     utils::{Logical, Rectangle},
-    wayland::input_method::{
-        InputMethodHandler, InputMethodSeat, PopupSurface, PositionerState,
-    },
+    wayland::input_method::{InputMethodHandler, InputMethodSeat, PopupSurface, PositionerState},
 };
 use tracing::warn;
 
@@ -139,8 +137,8 @@ fn ime_popup_target_rect(shell: &Shell, parent: &WlSurface) -> Option<Rectangle<
     let elem = shell.element_for_surface(parent)?;
     let output = output_for_surface(shell, parent)?;
     let parent_geo = shell.element_geometry(elem)?;
-    let origin = parent_geo.loc - elem.geometry().loc.as_global()
-        + elem.surface_offset(parent)?.as_global();
+    let origin =
+        parent_geo.loc - elem.geometry().loc.as_global() + elem.surface_offset(parent)?.as_global();
     let output_geo = output.geometry();
     Some(Rectangle::new(
         (output_geo.loc.x - origin.x, output_geo.loc.y - origin.y).into(),
@@ -152,7 +150,8 @@ pub fn is_privileged_ime_client(client: &Client) -> bool {
     let Some(app_id) = client_security_app_id(client) else {
         return false;
     };
-    let Ok(helper) = cosmic_config::Config::new("com.system76.CosmicComp", CosmicCompConfig::VERSION)
+    let Ok(helper) =
+        cosmic_config::Config::new("com.system76.CosmicComp", CosmicCompConfig::VERSION)
     else {
         return false;
     };
@@ -173,7 +172,10 @@ pub fn apply_saved_active_layout(state: &mut State) {
     let layout_string = state.common.config.cosmic_conf.xkb_config.layout.clone();
     let layouts = xkb_layout_codes(&layout_string);
     let Some(idx) = layouts.iter().position(|l| *l == active) else {
-        warn!(active, layout_string, "saved active_layout not in layout list");
+        warn!(
+            active,
+            layout_string, "saved active_layout not in layout list"
+        );
         return;
     };
 
