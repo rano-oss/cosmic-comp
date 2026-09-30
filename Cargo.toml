@@ -39,8 +39,8 @@ i18n-embed = { version = "0.16", features = [
     "desktop-requester",
 ] }
 i18n-embed-fl = "0.10"
-iced_tiny_skia = { git = "https://github.com/rano-oss/libcosmic", branch = "input-method-unstable-v3" }
-iced_graphics = { git = "https://github.com/rano-oss/libcosmic", branch = "input-method-unstable-v3", features = ["geometry"] }
+iced_tiny_skia = { git = "https://github.com/rano-oss/iced.git", branch = "input-method-unstable-v3" }
+iced_graphics = { git = "https://github.com/rano-oss/iced.git", branch = "input-method-unstable-v3", features = ["geometry"] }
 indexmap = "2.13"
 keyframe = "1.1.1"
 libcosmic = { git = "https://github.com/rano-oss/libcosmic", branch = "input-method-unstable-v3", default-features = false }
@@ -149,8 +149,14 @@ cosmic-protocols = { git = "https://github.com/pop-os//cosmic-protocols", branch
 libcosmic = { git = "https://github.com/rano-oss/libcosmic", branch = "input-method-unstable-v3" }
 cosmic-config = { git = "https://github.com/rano-oss/libcosmic", branch = "input-method-unstable-v3" }
 cosmic-theme = { git = "https://github.com/rano-oss/libcosmic", branch = "input-method-unstable-v3" }
-iced_tiny_skia = { git = "https://github.com/rano-oss/libcosmic", branch = "input-method-unstable-v3" }
-iced_graphics = { git = "https://github.com/rano-oss/libcosmic", branch = "input-method-unstable-v3" }
+
+[patch."https://github.com/pop-os/iced"]
+iced = { git = "https://github.com/rano-oss/iced.git", branch = "input-method-unstable-v3" }
+iced_tiny_skia = { git = "https://github.com/rano-oss/iced.git", branch = "input-method-unstable-v3" }
+iced_graphics = { git = "https://github.com/rano-oss/iced.git", branch = "input-method-unstable-v3" }
+iced_runtime = { git = "https://github.com/rano-oss/iced.git", branch = "input-method-unstable-v3" }
+iced_core = { git = "https://github.com/rano-oss/iced.git", branch = "input-method-unstable-v3" }
+iced_winit = { git = "https://github.com/rano-oss/iced.git", branch = "input-method-unstable-v3" }
 
 [patch.crates-io]
 smithay-egui = { git = "https://github.com/Smithay/smithay-egui.git", rev = "6511552" }
