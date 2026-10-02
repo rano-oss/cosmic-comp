@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-DESTDIR = debian/cosmic-comp
+export sysconfdir = "/usr/share"
 export VENDOR ?= 1
 CLEAN ?= 1
 
@@ -9,17 +9,11 @@ CLEAN ?= 1
 
 override_dh_auto_clean:
 ifeq ($(CLEAN),1)
-	ischroot && just clean || just clean-dist
+	ischroot && make clean || make distclean
 endif
 ifeq ($(VENDOR),1)
-	ischroot || just vendor
+	ischroot || make vendor
 endif
-
-override_dh_auto_build:
-	just build-vendored
-
-override_dh_auto_install:
-	just rootdir=$(DESTDIR) install
 
 override_dh_installinit:
 	dh_installinit -r

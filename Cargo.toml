@@ -17,7 +17,7 @@ cosmic-comp-config = { path = "cosmic-comp-config", features = [
     "libdisplay-info",
     "output",
 ] }
-cosmic-config = { git = "https://github.com/pop-os/libcosmic", features = [
+cosmic-config = { git = "https://github.com/rano-oss/libcosmic", branch = "experimental/xx-im-preedit-start", features = [
     "calloop",
     "macro",
 ] }
@@ -39,11 +39,11 @@ i18n-embed = { version = "0.16", features = [
     "desktop-requester",
 ] }
 i18n-embed-fl = "0.10"
-iced_tiny_skia = { git = "https://github.com/pop-os/libcosmic" }
-iced_graphics = { git = "https://github.com/pop-os/libcosmic/", features = ["geometry"] }
+iced_tiny_skia = { git = "https://github.com/rano-oss/iced.git", branch = "experimental/xx-im-preedit-start" }
+iced_graphics = { git = "https://github.com/rano-oss/iced.git", branch = "experimental/xx-im-preedit-start", features = ["geometry"] }
 indexmap = "2.13"
 keyframe = "1.1.1"
-libcosmic = { git = "https://github.com/pop-os/libcosmic", default-features = false }
+libcosmic = { git = "https://github.com/rano-oss/libcosmic", branch = "experimental/xx-im-preedit-start", default-features = false }
 libsystemd = { version = "0.7", optional = true }
 log-panics = { version = "2", features = ["with-backtrace"] }
 ordered-float = "5.1"
@@ -62,7 +62,7 @@ tracing = { version = "0.1.44", features = [
     "max_level_debug",
     "release_max_level_info",
 ] }
-tracing-journald = { version = "0.3.2", optional = true }
+tracing-journald = "0.3.2"
 tracing-subscriber = { version = "0.3.22", features = [
     "env-filter",
     "tracing-log",
@@ -122,7 +122,7 @@ optional = true
 debug = ["egui", "egui_plot", "smithay-egui", "anyhow/backtrace"]
 default = ["systemd"]
 logind = ["logind-zbus"]
-systemd = ["libsystemd", "logind", "tracing-journald"]
+systemd = ["libsystemd", "logind"]
 profile-with-tracy = ["profiling/profile-with-tracy", "tracy-client/default"]
 profile-with-tracy-gpu = ["profile-with-tracy", "smithay/tracy_gpu_profiling"]
 
@@ -145,6 +145,20 @@ lto = "fat"
 [patch."https://github.com/pop-os/cosmic-protocols"]
 cosmic-protocols = { git = "https://github.com/pop-os//cosmic-protocols", branch = "main" }
 
+[patch."https://github.com/pop-os/libcosmic"]
+libcosmic = { git = "https://github.com/rano-oss/libcosmic", branch = "experimental/xx-im-preedit-start" }
+cosmic-config = { git = "https://github.com/rano-oss/libcosmic", branch = "experimental/xx-im-preedit-start" }
+cosmic-theme = { git = "https://github.com/rano-oss/libcosmic", branch = "experimental/xx-im-preedit-start" }
+
+[patch."https://github.com/pop-os/iced"]
+iced = { git = "https://github.com/rano-oss/iced.git", branch = "experimental/xx-im-preedit-start" }
+iced_tiny_skia = { git = "https://github.com/rano-oss/iced.git", branch = "experimental/xx-im-preedit-start" }
+iced_graphics = { git = "https://github.com/rano-oss/iced.git", branch = "experimental/xx-im-preedit-start" }
+iced_runtime = { git = "https://github.com/rano-oss/iced.git", branch = "experimental/xx-im-preedit-start" }
+iced_core = { git = "https://github.com/rano-oss/iced.git", branch = "experimental/xx-im-preedit-start" }
+iced_winit = { git = "https://github.com/rano-oss/iced.git", branch = "experimental/xx-im-preedit-start" }
+
 [patch.crates-io]
-smithay = { git = "https://github.com/smithay/smithay.git", rev = "e3d461a" }
 smithay-egui = { git = "https://github.com/Smithay/smithay-egui.git", rev = "6511552" }
+smithay = { git = "https://github.com/rano-oss/smithay.git", branch = "experimental/xx-im-preedit-start" }
+wayland-protocols-experimental = { git = "https://github.com/rano-oss/wayland-rs.git", branch = "experimental/xx-im-preedit-start" }

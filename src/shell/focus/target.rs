@@ -16,7 +16,7 @@ use crate::{
 };
 use id_tree::NodeId;
 use smithay::{
-    backend::input::{InputTime, KeyState, TabletToolDescriptor},
+    backend::input::{InputTime, KeyState, Keycode, TabletToolDescriptor},
     desktop::{LayerSurface, PopupKind, WindowSurface, WindowSurfaceType, space::SpaceElement},
     input::{
         Seat,
@@ -831,6 +831,18 @@ impl KeyboardTarget<State> for KeyboardFocusTarget {
     ) {
         if let Some(inner) = self.inner_keyboard_target() {
             inner.modifiers(seat, data, modifiers, serial);
+        }
+    }
+    fn repeat(
+        &self,
+        seat: &Seat<State>,
+        data: &mut State,
+        keycode: Keycode,
+        serial: Serial,
+        time: InputTime,
+    ) {
+        if let Some(inner) = self.inner_keyboard_target() {
+            inner.repeat(seat, data, keycode, serial, time);
         }
     }
     fn replace(

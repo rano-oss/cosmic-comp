@@ -233,6 +233,8 @@ smithay::delegate_dispatch2!(State);
 #[derive(Debug)]
 pub struct Common {
     pub config: Config,
+    /// Live set of IME app IDs allowed to bind privileged IM globals.
+    pub allowed_ime_app_ids: crate::wayland::handlers::input_method::AllowedImeAppIds,
 
     pub socket: OsString,
     pub display_handle: DisplayHandle,
@@ -707,7 +709,26 @@ impl State {
         PointerGesturesState::new::<Self>(dh);
         TabletManagerState::new::<Self>(dh);
         SecurityContextState::new::<Self, _>(dh, client_has_no_security_context);
-        InputMethodManagerState::new::<Self, _>(dh, client_not_sandboxed);
+        let allowed_ime_app_ids = std::sync::Arc::new(std::sync::RwLock::new(
+            crate::wayland::handlers::input_method::allowed_app_ids_from_map(
+                &config.cosmic_conf.input_method_map,
+            ),
+        ));
+        {
+            let allowed = allowed_ime_app_ids.clone();
+            InputMethodManagerState::new::<Self, _>(dh, move |client| {
+                crate::wayland::handlers::input_method::is_privileged_ime_client(client, &allowed)
+            });
+        }
+        {
+            let allowed = allowed_ime_app_ids.clone();
+            smithay::wayland::keyboard_filter::KeyboardFilterManagerState::new::<Self, _>(
+                dh,
+                move |client| {
+                    crate::wayland::handlers::input_method::is_privileged_ime_client(client, &allowed)
+                },
+            );
+        }
         TextInputManagerState::new::<Self>(dh);
         VirtualKeyboardManagerState::new::<State, _>(dh, client_not_sandboxed);
         AlphaModifierState::new::<Self>(dh);
@@ -771,6 +792,7 @@ impl State {
         State {
             common: Common {
                 config,
+                allowed_ime_app_ids,
                 socket,
                 display_handle: dh.clone(),
                 event_loop_handle: handle,

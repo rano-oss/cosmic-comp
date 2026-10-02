@@ -21,7 +21,7 @@ use std::{
 use smithay::{
     backend::{
         drm::DrmNode,
-        input::InputTime,
+        input::{InputTime, Keycode},
         renderer::{
             ImportAll, Renderer, buffer_has_alpha,
             element::{Kind, RenderElementStates, surface::KindEvaluation},
@@ -1110,6 +1110,24 @@ impl KeyboardTarget<State> for CosmicSurface {
             }
             WindowSurface::X11(x11) => {
                 KeyboardTarget::modifiers(x11, seat, data, modifiers, serial)
+            }
+        }
+    }
+
+    fn repeat(
+        &self,
+        seat: &Seat<State>,
+        data: &mut State,
+        keycode: Keycode,
+        serial: smithay::utils::Serial,
+        time: InputTime,
+    ) {
+        match self.0.underlying_surface() {
+            WindowSurface::Wayland(toplevel) => {
+                KeyboardTarget::repeat(toplevel.wl_surface(), seat, data, keycode, serial, time)
+            }
+            WindowSurface::X11(x11) => {
+                KeyboardTarget::repeat(x11, seat, data, keycode, serial, time)
             }
         }
     }

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-use std::{borrow::Borrow, sync::Mutex};
-
-use indexmap::IndexMap;
+use std::{borrow::Borrow, collections::HashMap, sync::Mutex};
 
 use smithay::{
     backend::{
@@ -454,28 +452,23 @@ fn constraints_for_renderer(
         .ok()
         .and_then(|device| device.try_get_render_node().ok().flatten())
     {
-        let mut formats = renderer
-            .egl_context()
-            .dmabuf_render_formats()
-            .iter()
-            .fold(
-                IndexMap::<Fourcc, Vec<Modifier>>::new(),
-                |mut map, format| {
-                    map.entry(format.code).or_default().push(format.modifier);
-                    map
-                },
-            )
-            .into_iter()
-            .collect::<Vec<_>>();
-        formats.sort_by_key(|(code, _)| !is_preferred_capture_format(*code));
-        constraints.dma = Some(DmabufConstraints { node, formats });
+        constraints.dma = Some(DmabufConstraints {
+            node,
+            formats: renderer
+                .egl_context()
+                .dmabuf_render_formats()
+                .iter()
+                .fold(
+                    HashMap::<Fourcc, Vec<Modifier>>::new(),
+                    |mut map, format| {
+                        map.entry(format.code).or_default().push(format.modifier);
+                        map
+                    },
+                )
+                .into_iter()
+                .collect::<Vec<_>>(),
+        });
     }
 
     constraints
-}
-
-/// Formats most screencast consumers handle natively, offered first. WebRTC, for
-/// example, swaps RGBA frames to BGRA on the CPU for every captured frame.
-fn is_preferred_capture_format(code: Fourcc) -> bool {
-    matches!(code, Fourcc::Argb8888 | Fourcc::Xrgb8888)
 }

@@ -4,10 +4,7 @@ use std::str::FromStr;
 
 use anyhow::Result;
 
-#[cfg(feature = "systemd")]
-use tracing::warn;
-use tracing::{debug, info};
-#[cfg(feature = "systemd")]
+use tracing::{debug, info, warn};
 use tracing_journald as journald;
 use tracing_subscriber::{EnvFilter, filter::Directive, fmt, prelude::*};
 
@@ -32,7 +29,6 @@ pub fn init_logger() -> Result<()> {
 
     let fmt_layer = fmt::layer().compact();
 
-    #[cfg(feature = "systemd")]
     match journald::layer() {
         Ok(journald_layer) => tracing_subscriber::registry()
             .with(fmt_layer)
@@ -47,11 +43,6 @@ pub fn init_logger() -> Result<()> {
             warn!(?err, "Failed to init journald logging.");
         }
     };
-    #[cfg(not(feature = "systemd"))]
-    tracing_subscriber::registry()
-        .with(fmt_layer)
-        .with(filter)
-        .init();
     log_panics::init();
 
     info!("Version: {}", std::env!("CARGO_PKG_VERSION"));

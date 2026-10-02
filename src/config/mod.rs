@@ -5,12 +5,17 @@ use crate::{
     shell::Shell,
     state::{BackendData, State},
     utils::prelude::OutputExt,
-    wayland::protocols::{
-        output_configuration::OutputConfigurationState, workspace::WorkspaceUpdateGuard,
+    wayland::{
+        handlers::input_method::{
+            apply_saved_active_layout, sync_input_method_with_layout, sync_input_methods_all_seats,
+        },
+        protocols::{
+            output_configuration::OutputConfigurationState, workspace::WorkspaceUpdateGuard,
+        },
     },
 };
 use anyhow::Context;
-use cosmic_config::{ConfigGet, ConfigSet, CosmicConfigEntry};
+use cosmic_config::{ConfigGet, CosmicConfigEntry};
 use cosmic_settings_config::window_rules::ApplicationException;
 use cosmic_settings_config::{Shortcuts, shortcuts, window_rules};
 use serde::{Deserialize, Serialize};
@@ -49,8 +54,8 @@ mod types;
 use cosmic::config::CosmicTk;
 pub use cosmic_comp_config::EdidProduct;
 use cosmic_comp_config::{
-    ActivationPolicy, AppearanceConfig, CosmicCompConfig, CursorHideConfig, DecorationPreference,
-    KeyboardConfig, TileBehavior, XkbConfig, XwaylandDescaling, XwaylandEavesdropping, ZoomConfig,
+    ActivationPolicy, AppearanceConfig, CosmicCompConfig, DecorationPreference, KeyboardConfig,
+    TileBehavior, XkbConfig, XwaylandDescaling, XwaylandEavesdropping, ZoomConfig,
     input::{DeviceState as InputDeviceState, InputConfig, TouchpadOverride},
     output::comp::{
         OutputConfig, OutputInfo, OutputState, OutputsConfig, TransformDef, load_outputs,
@@ -182,7 +187,7 @@ impl Config {
             .expect("Failed to add cosmic-config to the event loop");
         let xdg = xdg::BaseDirectories::new();
 
-        let mut cosmic_comp_config =
+        let cosmic_comp_config =
             CosmicCompConfig::get_entry(&config).unwrap_or_else(|(errs, c)| {
                 if cfg!(debug_assertions) {
                     for err in errs {
@@ -191,18 +196,6 @@ impl Config {
                 }
                 c
             });
-
-        // `cursor_hide_timeout` was replaced by the grouped `cursor_hide` key.
-        // Seed the new key once so configs hand-edited before the rename keep
-        // working; the old file is left in place so a downgrade still reads it.
-        if config.get::<CursorHideConfig>("cursor_hide").is_err()
-            && let Ok(legacy) = config.get::<Option<u32>>("cursor_hide_timeout")
-        {
-            cosmic_comp_config.cursor_hide.idle_timeout = legacy;
-            if let Err(err) = config.set("cursor_hide", cosmic_comp_config.cursor_hide) {
-                warn!(?err, "Failed to migrate cursor_hide_timeout to cursor_hide");
-            }
-        }
 
         // Listen for updates to the toolkit config
         if let Ok(tk_config) = cosmic_config::Config::new("com.system76.CosmicTk", 1) {
@@ -836,6 +829,8 @@ fn config_changed(config: cosmic_config::Config, keys: Vec<String>, state: &mut 
                         if let Err(err) = keyboard.set_xkb_config(state, xkb_config_to_wl(&value)) {
                             error!(?err, "Failed to load provided xkb config");
                             // TODO Revert to default?
+                        } else {
+                            sync_input_method_with_layout(state, &seat, &value.layout);
                         }
 
                         // Press and release the numlock key to update modifiers.
@@ -942,6 +937,20 @@ fn config_changed(config: cosmic_config::Config, keys: Vec<String>, state: &mut 
                     state.common.update_config();
                 }
             }
+            "active_layout" => {
+                state.common.config.cosmic_conf.active_layout =
+                    get_config(&config, "active_layout");
+                apply_saved_active_layout(state);
+            }
+            "input_method_map" => {
+                state.common.config.cosmic_conf.input_method_map =
+                    get_config(&config, "input_method_map");
+                *state.common.allowed_ime_app_ids.write().unwrap() =
+                    crate::wayland::handlers::input_method::allowed_app_ids_from_map(
+                        &state.common.config.cosmic_conf.input_method_map,
+                    );
+                sync_input_methods_all_seats(state);
+            }
             "descale_xwayland" => {
                 let new = get_config::<XwaylandDescaling>(&config, "descale_xwayland");
                 if new != state.common.config.cosmic_conf.descale_xwayland {
@@ -1003,21 +1012,15 @@ fn config_changed(config: cosmic_config::Config, keys: Vec<String>, state: &mut 
                 let new = get_config::<bool>(&config, "cursor_shake_to_find");
                 state.common.config.cosmic_conf.cursor_shake_to_find = new;
             }
-            "cursor_hide" => {
-                let new = get_config::<CursorHideConfig>(&config, "cursor_hide");
-                if new != state.common.config.cosmic_conf.cursor_hide {
-                    state.common.config.cosmic_conf.cursor_hide = new;
-                    // Reveal on every change: a visible cursor is the safe state,
-                    // and it avoids stranding a hidden cursor when the trigger
-                    // that hid it is switched off.
+            "cursor_hide_timeout" => {
+                let new = get_config::<Option<u32>>(&config, "cursor_hide_timeout");
+                if new != state.common.config.cosmic_conf.cursor_hide_timeout {
+                    state.common.config.cosmic_conf.cursor_hide_timeout = new;
                     let seats: Vec<_> = state.common.shell.read().seats.iter().cloned().collect();
                     let mut needs_render = false;
                     for seat in seats {
-                        needs_render |= crate::backend::render::cursor::notify_cursor_activity(
-                            state,
-                            &seat,
-                            crate::backend::render::cursor::PointerEventKind::Motion,
-                        );
+                        needs_render |=
+                            crate::backend::render::cursor::notify_cursor_activity(state, &seat);
                     }
                     if needs_render {
                         let outputs: Vec<_> =
