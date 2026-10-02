@@ -4,8 +4,7 @@ use crate::shell::Shell;
 use crate::state::{ClientState, State};
 use crate::utils::geometry::{PointExt, SizeExt};
 use crate::utils::prelude::OutputExt;
-use cosmic_comp_config::CosmicCompConfig;
-use cosmic_config::CosmicConfigEntry;
+use cosmic_comp_config::InputMethodEntry;
 use smithay::{
     desktop::{PopupKind, PopupManager, space::SpaceElement},
     output::Output,
@@ -13,7 +12,28 @@ use smithay::{
     utils::{Logical, Rectangle},
     wayland::input_method::{InputMethodHandler, InputMethodSeat, PopupSurface, PositionerState},
 };
+use std::collections::HashSet;
+use std::sync::{Arc, RwLock};
 use tracing::warn;
+
+/// App IDs allowed to bind the input-method / keyboard-filter globals.
+pub type AllowedImeAppIds = Arc<RwLock<HashSet<String>>>;
+
+pub fn allowed_app_ids_from_map(
+    map: &std::collections::HashMap<String, InputMethodEntry>,
+) -> HashSet<String> {
+    map.values().map(|e| e.app_id.clone()).collect()
+}
+
+pub fn is_privileged_ime_client(client: &Client, allowed: &AllowedImeAppIds) -> bool {
+    let Some(app_id) = client_security_app_id(client) else {
+        return false;
+    };
+    allowed
+        .read()
+        .map(|set| set.contains(app_id))
+        .unwrap_or(false)
+}
 
 impl InputMethodHandler for State {
     fn new_popup(&mut self, surface: PopupSurface) {
@@ -146,22 +166,6 @@ fn ime_popup_target_rect(shell: &Shell, parent: &WlSurface) -> Option<Rectangle<
     ))
 }
 
-pub fn is_privileged_ime_client(client: &Client) -> bool {
-    let Some(app_id) = client_security_app_id(client) else {
-        return false;
-    };
-    let Ok(helper) =
-        cosmic_config::Config::new("com.system76.CosmicComp", CosmicCompConfig::VERSION)
-    else {
-        return false;
-    };
-    CosmicCompConfig::get_entry(&helper)
-        .unwrap_or_else(|(_, c)| c)
-        .input_method_map
-        .values()
-        .any(|e| e.app_id == app_id)
-}
-
 pub fn apply_saved_active_layout(state: &mut State) {
     use smithay::input::keyboard::Layout;
 
@@ -251,6 +255,6 @@ pub fn sync_input_method_with_layout(
         if im.active_app_id().is_some_and(|id| id != app_id) {
             im.clear_active_instance(state, seat);
         }
-        warn!("Input method '{}' for layout not registered yet", app_id);
+        warn!(%app_id, "input method for layout not registered yet");
     }
 }
