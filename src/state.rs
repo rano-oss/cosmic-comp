@@ -725,7 +725,9 @@ impl State {
             smithay::wayland::keyboard_filter::KeyboardFilterManagerState::new::<Self, _>(
                 dh,
                 move |client| {
-                    crate::wayland::handlers::input_method::is_privileged_ime_client(client, &allowed)
+                    crate::wayland::handlers::input_method::is_privileged_ime_client(
+                        client, &allowed,
+                    )
                 },
             );
         }
