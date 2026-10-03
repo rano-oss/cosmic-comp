@@ -156,7 +156,6 @@ iced_tiny_skia = { git = "https://github.com/rano-oss/iced.git", branch = "exper
 iced_graphics = { git = "https://github.com/rano-oss/iced.git", branch = "experimental/xx-im-preedit-start" }
 iced_runtime = { git = "https://github.com/rano-oss/iced.git", branch = "experimental/xx-im-preedit-start" }
 iced_core = { git = "https://github.com/rano-oss/iced.git", branch = "experimental/xx-im-preedit-start" }
-iced_winit = { git = "https://github.com/rano-oss/iced.git", branch = "experimental/xx-im-preedit-start" }
 
 [patch.crates-io]
 smithay-egui = { git = "https://github.com/Smithay/smithay-egui.git", rev = "6511552" }
