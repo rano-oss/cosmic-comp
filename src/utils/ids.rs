@@ -14,8 +14,6 @@ macro_rules! id_gen {
             }
 
             let id = loop {
-                // `try_update` is not available on all supported rustc versions yet.
-                #[allow(deprecated)]
                 let new_id = $id_name.fetch_update(
                     std::sync::atomic::Ordering::SeqCst,
                     std::sync::atomic::Ordering::SeqCst,

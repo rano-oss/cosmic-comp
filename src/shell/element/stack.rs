@@ -324,8 +324,6 @@ impl CosmicStack {
             match direction {
                 FocusDirection::Left => {
                     if !p.group_focused.load(Ordering::SeqCst) {
-                        // `try_update` is not available on all supported rustc versions yet.
-                        #[allow(deprecated)]
                         if let Ok(old) =
                             p.active
                                 .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |val| {
@@ -353,8 +351,6 @@ impl CosmicStack {
                 FocusDirection::Right => {
                     if !p.group_focused.load(Ordering::SeqCst) {
                         let max = p.windows.lock().unwrap().len();
-                        // `try_update` is not available on all supported rustc versions yet.
-                        #[allow(deprecated)]
                         if let Ok(old) =
                             p.active
                                 .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |val| {
@@ -1523,8 +1519,6 @@ impl SpaceElement for CosmicStack {
             }
 
             let len = windows.len();
-            // `try_update` is not available on all supported rustc versions yet.
-            #[allow(deprecated)]
             let _ = p
                 .active
                 .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |active| {
