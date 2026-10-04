@@ -176,23 +176,21 @@ fn position_popup_within_rect(
             rect.contains_rect(geometry)
         }
         PopupKind::InputMethod(popup) => {
-            let input_rect = popup.text_input_rectangle();
+            if popup.repositions_via_configure() {
+                // Positioned via InputMethodHandler::popup_geometry; reconstrain would configure-loop.
+                return true;
+            }
 
-            // We basically place the IME popup below the input rect.
+            let input_rect = popup.anchor_rectangle();
+
+            // Place below the input rect; FlipX/FlipY for overflow.
             let mut popup_bbox = utils::bbox_from_surface_tree(popup.wl_surface(), input_rect.loc);
             popup_bbox.loc.y += input_rect.size.h;
-            // tracing::debug!(
-            //     "IME input_rect: {:?}, popup_bbox: {:?}",
-            //     input_rect,
-            //     popup_bbox
-            // );
 
-            // Handle the right edge overflow
             let popup_right = popup_bbox.loc.x + popup_bbox.size.w;
             let rect_right = rect.loc.x + rect.size.w;
             popup_bbox.loc.x -= (popup_right - rect_right).max(0);
 
-            // Flip vertically if the bottom edge overflows
             let popup_bottom = popup_bbox.loc.y + popup_bbox.size.h;
             let rect_bottom = rect.loc.y + rect.size.h;
             if popup_bottom > rect_bottom {

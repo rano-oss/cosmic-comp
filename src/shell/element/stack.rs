@@ -38,7 +38,7 @@ use shortcuts::action::{Direction, FocusDirection};
 use smithay::{
     backend::{
         drm::DrmNode,
-        input::{InputTime, KeyState, TabletToolDescriptor},
+        input::{InputTime, KeyState, Keycode, TabletToolDescriptor},
         renderer::{
             ImportAll, ImportMem, Renderer,
             element::{Element, Id as RendererId, Kind, RenderElement, UnderlyingStorage},
@@ -1615,6 +1615,28 @@ impl KeyboardTarget<State> for CosmicStack {
                     data,
                     modifiers,
                     serial,
+                )
+            }
+        })
+    }
+    fn repeat(
+        &self,
+        seat: &Seat<State>,
+        data: &mut State,
+        keycode: Keycode,
+        serial: Serial,
+        time: InputTime,
+    ) {
+        let active = self.keyboard_leave_if_previous(seat, data, serial);
+        self.0.with_program(|p| {
+            if !p.group_focused.load(Ordering::SeqCst) {
+                KeyboardTarget::repeat(
+                    &p.windows.lock().unwrap()[active],
+                    seat,
+                    data,
+                    keycode,
+                    serial,
+                    time,
                 )
             }
         })
