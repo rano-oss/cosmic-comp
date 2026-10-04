@@ -177,7 +177,7 @@ fn position_popup_within_rect(
         }
         PopupKind::InputMethod(popup) => {
             if popup.repositions_via_configure() {
-                // v3: positioned via popup_geometry; reconstrain would configure-loop.
+                // Positioned via InputMethodHandler::popup_geometry; reconstrain would configure-loop.
                 return true;
             }
 
