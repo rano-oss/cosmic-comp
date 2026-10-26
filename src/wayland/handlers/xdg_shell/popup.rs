@@ -176,7 +176,7 @@ fn position_popup_within_rect(
             rect.contains_rect(geometry)
         }
         PopupKind::InputMethod(popup) => {
-            let input_rect = popup.text_input_rectangle();
+            let input_rect = popup.anchor_rectangle();
 
             // We basically place the IME popup below the input rect.
             let mut popup_bbox = utils::bbox_from_surface_tree(popup.wl_surface(), input_rect.loc);
