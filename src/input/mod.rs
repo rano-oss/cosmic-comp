@@ -357,6 +357,33 @@ impl State {
                         }
                     }
 
+                    let current_layout = keyboard
+                        .with_xkb_state(self, |xkb| xkb.xkb().lock().unwrap().active_layout());
+                    if current_layout != previous_layout {
+                        use crate::wayland::handlers::input_method::sync_input_method_with_layout;
+                        use cosmic_config::ConfigSet;
+
+                        let layout_string =
+                            self.common.config.cosmic_conf.xkb_config.layout.clone();
+                        sync_input_method_with_layout(self, &seat, &layout_string);
+
+                        if let Some(code) = layout_string
+                            .split(',')
+                            .map(str::trim)
+                            .nth(current_layout.0 as usize)
+                        {
+                            let code = code.to_string();
+                            if self.common.config.cosmic_conf.active_layout != code {
+                                self.common.config.cosmic_conf.active_layout = code.clone();
+                                if let Err(err) =
+                                    self.common.config.cosmic_helper.set("active_layout", &code)
+                                {
+                                    error!(?err, "Failed to write active_layout");
+                                }
+                            }
+                        }
+                    }
+
                     // A bare modifier press changes the modifier state; a real
                     // keystroke does not. Super+drag moves windows, so hiding on
                     // Super-down would take the cursor away exactly as the user
