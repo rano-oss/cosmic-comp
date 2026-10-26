@@ -176,6 +176,10 @@ fn position_popup_within_rect(
             rect.contains_rect(geometry)
         }
         PopupKind::InputMethod(popup) => {
+            if popup.repositions_via_configure() {
+                return true;
+            }
+
             let input_rect = popup.anchor_rectangle();
 
             // We basically place the IME popup below the input rect.

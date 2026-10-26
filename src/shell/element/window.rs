@@ -21,7 +21,7 @@ use cosmic_comp_config::AppearanceConfig;
 use smithay::{
     backend::{
         drm::DrmNode,
-        input::{InputTime, KeyState, TabletToolDescriptor},
+        input::{InputTime, KeyState, Keycode, TabletToolDescriptor},
         renderer::{
             ImportAll, ImportMem, Renderer,
             element::{Element, Id as RendererId, Kind, RenderElement, UnderlyingStorage},
@@ -1015,6 +1015,17 @@ impl KeyboardTarget<State> for CosmicWindow {
     ) {
         self.0
             .with_program(|p| KeyboardTarget::modifiers(&p.window, seat, data, modifiers, serial))
+    }
+    fn repeat(
+        &self,
+        seat: &Seat<State>,
+        data: &mut State,
+        keycode: Keycode,
+        serial: Serial,
+        time: InputTime,
+    ) {
+        self.0
+            .with_program(|p| KeyboardTarget::repeat(&p.window, seat, data, keycode, serial, time))
     }
 }
 

@@ -158,6 +158,7 @@ pub fn init_backend_auto(
                     state.backend.schedule_render(output);
                 }
             }
+            crate::wayland::handlers::input_method::apply_saved_active_layout(state);
         }
     }
     res

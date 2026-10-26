@@ -33,4 +33,8 @@ impl SeatHandler for State {
         let devices = userdata.get::<Devices>().unwrap();
         devices.update_led_state(led_state);
     }
+
+    fn loop_handle(&self) -> Option<smithay::reexports::calloop::LoopHandle<'static, Self>> {
+        Some(self.common.event_loop_handle.clone())
+    }
 }
