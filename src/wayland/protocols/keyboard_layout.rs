@@ -19,8 +19,12 @@ use wayland_backend::server::{ClientId, GlobalId};
 
 pub trait KeyboardLayoutHandler: SeatHandler {
     fn keyboard_layout_state(&mut self) -> &mut KeyboardLayoutState;
-    /// Group has been changed through the protocol
+    /// Group has been changed (e.g. refresh / notify clients).
     fn group_changed(&mut self, keyboard: &KeyboardHandle<Self>);
+    /// Client requested a new group via `SetGroup`.
+    fn group_set(&mut self, keyboard: &KeyboardHandle<Self>) {
+        self.group_changed(keyboard);
+    }
 }
 
 #[derive(Debug)]
@@ -164,6 +168,7 @@ where
                     handle.with_xkb_state(state, |mut context| {
                         context.set_layout(Layout(group));
                     });
+                    state.group_set(handle);
                 }
             }
             zcosmic_keyboard_layout_v1::Request::Destroy => {}
