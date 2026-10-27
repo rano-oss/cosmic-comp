@@ -39,11 +39,6 @@ impl InputMethodHandler for State {
     fn new_popup(&mut self, surface: PopupSurface) {
         if surface.repositions_via_configure() {
             schedule_ime_popup_render(self, &surface);
-        } else {
-            self.common
-                .shell
-                .read()
-                .unconstrain_popup(&PopupKind::from(surface.clone()));
         }
         if let Err(err) = self.common.popups.track_popup(PopupKind::from(surface)) {
             warn!("Failed to track popup: {err}");
@@ -247,14 +242,50 @@ pub fn sync_input_method_with_layout(
 ) {
     let im = seat.input_method();
     let Some(app_id) = ime_app_id_for_seat(state, seat, layout) else {
+        warn!(%layout, "no IME mapped for active layout; clearing instance");
         im.clear_active_instance(state, seat);
         return;
     };
+    let before = im.active_app_id();
     if !im.set_active_instance(state, seat, &app_id, true) {
         // Don't clear when the target IME is not registered yet (eats filter buffer).
         if im.active_app_id().is_some_and(|id| id != app_id) {
             im.clear_active_instance(state, seat);
         }
         warn!(%app_id, "input method for layout not registered yet");
+    } else {
+        warn!(
+            %layout,
+            ?before,
+            after = %app_id,
+            "synced active IME with layout"
+        );
+    }
+}
+
+/// After the seat's XKB group changes: rebind the IME and persist `active_layout`.
+pub fn on_active_layout_changed(state: &mut State, seat: &smithay::input::Seat<State>) {
+    use cosmic_config::ConfigSet;
+    use tracing::error;
+
+    let layout_string = state.common.config.cosmic_conf.xkb_config.layout.clone();
+    sync_input_method_with_layout(state, seat, &layout_string);
+
+    let Some(keyboard) = seat.get_keyboard() else {
+        return;
+    };
+    let current = keyboard.with_xkb_state(state, |xkb| xkb.xkb().lock().unwrap().active_layout());
+    let Some(code) = xkb_layout_codes(&layout_string)
+        .get(current.0 as usize)
+        .map(|s| (*s).to_string())
+    else {
+        return;
+    };
+    if state.common.config.cosmic_conf.active_layout == code {
+        return;
+    }
+    state.common.config.cosmic_conf.active_layout = code.clone();
+    if let Err(err) = state.common.config.cosmic_helper.set("active_layout", &code) {
+        error!(?err, "Failed to write active_layout");
     }
 }

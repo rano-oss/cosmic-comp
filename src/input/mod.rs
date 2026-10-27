@@ -78,6 +78,7 @@ use smithay::{
         image_copy_capture::CursorSessionRef,
         keyboard_shortcuts_inhibit::KeyboardShortcutsInhibitorSeat,
         pointer_constraints::{PointerConstraint, with_pointer_constraint},
+        input_method::InputMethodSeat,
         seat::WaylandFocus,
     },
 };
@@ -345,28 +346,9 @@ impl State {
                     let current_layout = keyboard
                         .with_xkb_state(self, |xkb| xkb.xkb().lock().unwrap().active_layout());
                     if current_layout != previous_layout {
-                        use crate::wayland::handlers::input_method::sync_input_method_with_layout;
-                        use cosmic_config::ConfigSet;
-
-                        let layout_string =
-                            self.common.config.cosmic_conf.xkb_config.layout.clone();
-                        sync_input_method_with_layout(self, &seat, &layout_string);
-
-                        if let Some(code) = layout_string
-                            .split(',')
-                            .map(str::trim)
-                            .nth(current_layout.0 as usize)
-                        {
-                            let code = code.to_string();
-                            if self.common.config.cosmic_conf.active_layout != code {
-                                self.common.config.cosmic_conf.active_layout = code.clone();
-                                if let Err(err) =
-                                    self.common.config.cosmic_helper.set("active_layout", &code)
-                                {
-                                    error!(?err, "Failed to write active_layout");
-                                }
-                            }
-                        }
+                        crate::wayland::handlers::input_method::on_active_layout_changed(
+                            self, &seat,
+                        );
                     }
 
                     // A bare modifier press changes the modifier state; a real
@@ -2171,6 +2153,19 @@ impl State {
         let result = self.filter_keyboard_input(
             backend_id, seat, modifiers, handle, serial, keycode, key_state, time,
         );
+
+        if matches!(
+            sym,
+            smithay::input::keyboard::Keysym::Shift_L | smithay::input::keyboard::Keysym::Shift_R
+        ) {
+            let im_active = seat.input_method().has_instance();
+            tracing::warn!(
+                ?key_state,
+                ?result,
+                im_active,
+                "shift key through compositor filter"
+            );
+        }
 
         // A modifier-only binding fires on the modifier's release, but its press was already
         // forwarded. Forward the release too.
