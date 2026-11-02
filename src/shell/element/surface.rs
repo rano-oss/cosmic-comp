@@ -891,37 +891,37 @@ impl CosmicSurface {
         R: Renderer + ImportAll + AsGlowRenderer,
         R::TextureId: Clone + 'static,
     {
-        match self.0.underlying_surface() {
-            WindowSurface::Wayland(toplevel) => {
-                let surface = toplevel.wl_surface();
-                for (popup, popup_offset) in PopupManager::popups_for_surface(surface) {
-                    let offset = (self.0.geometry().loc + popup_offset - popup.geometry().loc)
-                        .to_physical_precise_round(scale);
-                    let mut geometry = popup.geometry().to_f64();
-                    geometry.loc += location.to_f64().to_logical(scale) + popup_offset.to_f64();
-                    let radii = with_states(popup.wl_surface(), |states| {
-                        surface_corners(states, geometry.size.to_i32_round())
-                    })
-                    .unwrap_or([0; 4]);
+        // Xwayland windows are WindowSurface::X11 but still have a wl_surface;
+        // IME popups are parented to that surface and must be drawn (previously
+        // the X11 arm was empty, so Steam/WordCraft never showed candidates).
+        let Some(surface) = self.wl_surface() else {
+            return;
+        };
+        for (popup, popup_offset) in PopupManager::popups_for_surface(&surface) {
+            let offset = (self.0.geometry().loc + popup_offset - popup.geometry().loc)
+                .to_physical_precise_round(scale);
+            let mut geometry = popup.geometry().to_f64();
+            geometry.loc += location.to_f64().to_logical(scale) + popup_offset.to_f64();
+            let radii = with_states(popup.wl_surface(), |states| {
+                surface_corners(states, geometry.size.to_i32_round())
+            })
+            .unwrap_or([0; 4]);
 
-                    push_render_elements_from_surface_tree(
-                        renderer,
-                        popup.wl_surface(),
-                        location + offset,
-                        geometry,
-                        scale,
-                        alpha,
-                        false,
-                        radii,
-                        None,
-                        blur_strength,
-                        scanout_kind_eval(None, scanout_node, alpha),
-                        push,
-                        None,
-                    )
-                }
-            }
-            WindowSurface::X11(_) => {}
+            push_render_elements_from_surface_tree(
+                renderer,
+                popup.wl_surface(),
+                location + offset,
+                geometry,
+                scale,
+                alpha,
+                false,
+                radii,
+                None,
+                blur_strength,
+                scanout_kind_eval(None, scanout_node, alpha),
+                push,
+                None,
+            )
         }
     }
 
