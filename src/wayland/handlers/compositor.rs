@@ -283,10 +283,10 @@ impl CompositorHandler for State {
 
         if let Some(popup) = self.common.popups.find_popup(surface) {
             xdg_popup_ensure_initial_configure(&popup);
-            if let PopupKind::InputMethod(im) = &popup {
-                if !im.repositions_via_configure() {
-                    shell.unconstrain_popup(&popup);
-                }
+            if let PopupKind::InputMethod(im) = &popup
+                && !im.repositions_via_configure()
+            {
+                shell.unconstrain_popup(&popup);
             }
             return;
         }

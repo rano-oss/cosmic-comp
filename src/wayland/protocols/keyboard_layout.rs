@@ -20,7 +20,6 @@ use wayland_backend::server::{ClientId, GlobalId};
 pub trait KeyboardLayoutHandler: SeatHandler {
     fn keyboard_layout_state(&mut self) -> &mut KeyboardLayoutState;
     fn group_changed(&mut self, keyboard: &KeyboardHandle<Self>);
-    fn xkb_group_changed(&mut self, _keyboard: &KeyboardHandle<Self>) {}
 }
 
 #[derive(Debug)]
@@ -59,11 +58,10 @@ impl KeyboardLayoutState {
                 let active_layout = handle.with_xkb_state(state, |context| {
                     context.xkb().lock().unwrap().active_layout()
                 });
-                state.group_changed(handle);
                 if *last_layout != Some(active_layout) {
                     keyboard_layout.group(active_layout.0);
                     *last_layout = Some(active_layout);
-                    state.xkb_group_changed(handle);
+                    state.group_changed(handle);
                 }
             }
         }
