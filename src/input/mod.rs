@@ -357,14 +357,6 @@ impl State {
                         }
                     }
 
-                    let current_layout = keyboard
-                        .with_xkb_state(self, |xkb| xkb.xkb().lock().unwrap().active_layout());
-                    if current_layout != previous_layout {
-                        crate::wayland::handlers::input_method::on_active_layout_changed(
-                            self, &seat,
-                        );
-                    }
-
                     // A bare modifier press changes the modifier state; a real
                     // keystroke does not. Super+drag moves windows, so hiding on
                     // Super-down would take the cursor away exactly as the user

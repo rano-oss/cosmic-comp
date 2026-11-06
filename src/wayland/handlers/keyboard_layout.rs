@@ -15,8 +15,7 @@ impl KeyboardLayoutHandler for State {
         self.broadcast_ei_keyboard_modifiers(keyboard);
     }
 
-    fn group_set(&mut self, keyboard: &KeyboardHandle<Self>) {
-        self.group_changed(keyboard);
+    fn xkb_group_changed(&mut self, keyboard: &KeyboardHandle<Self>) {
         let seat = self
             .common
             .shell

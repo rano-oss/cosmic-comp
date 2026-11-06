@@ -263,17 +263,14 @@ pub fn sync_input_method_with_layout(
     }
 }
 
-/// After the seat's XKB group changes: rebind the IME and persist `active_layout`.
-pub fn on_active_layout_changed(state: &mut State, seat: &smithay::input::Seat<State>) {
+fn persist_active_layout(state: &mut State, seat: &smithay::input::Seat<State>) {
     use cosmic_config::ConfigSet;
     use tracing::error;
-
-    let layout_string = state.common.config.cosmic_conf.xkb_config.layout.clone();
-    sync_input_method_with_layout(state, seat, &layout_string);
 
     let Some(keyboard) = seat.get_keyboard() else {
         return;
     };
+    let layout_string = state.common.config.cosmic_conf.xkb_config.layout.clone();
     let current = keyboard.with_xkb_state(state, |xkb| xkb.xkb().lock().unwrap().active_layout());
     let Some(code) = xkb_layout_codes(&layout_string)
         .get(current.0 as usize)
@@ -288,4 +285,10 @@ pub fn on_active_layout_changed(state: &mut State, seat: &smithay::input::Seat<S
     if let Err(err) = state.common.config.cosmic_helper.set("active_layout", &code) {
         error!(?err, "Failed to write active_layout");
     }
+}
+
+pub fn on_active_layout_changed(state: &mut State, seat: &smithay::input::Seat<State>) {
+    let layout_string = state.common.config.cosmic_conf.xkb_config.layout.clone();
+    sync_input_method_with_layout(state, seat, &layout_string);
+    persist_active_layout(state, seat);
 }
