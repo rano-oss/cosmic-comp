@@ -78,7 +78,6 @@ use smithay::{
         image_copy_capture::CursorSessionRef,
         keyboard_shortcuts_inhibit::KeyboardShortcutsInhibitorSeat,
         pointer_constraints::{PointerConstraint, with_pointer_constraint},
-        input_method::InputMethodSeat,
         seat::WaylandFocus,
     },
 };
@@ -2168,19 +2167,6 @@ impl State {
         let result = self.filter_keyboard_input(
             backend_id, seat, modifiers, handle, serial, keycode, key_state, time,
         );
-
-        if matches!(
-            sym,
-            smithay::input::keyboard::Keysym::Shift_L | smithay::input::keyboard::Keysym::Shift_R
-        ) {
-            let im_active = seat.input_method().has_instance();
-            tracing::warn!(
-                ?key_state,
-                ?result,
-                im_active,
-                "shift key through compositor filter"
-            );
-        }
 
         // A modifier-only binding fires on the modifier's release, but its press was already
         // forwarded. Forward the release too.
