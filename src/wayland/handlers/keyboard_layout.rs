@@ -3,7 +3,7 @@
 use smithay::input::keyboard::KeyboardHandle;
 
 use crate::state::State;
-use crate::wayland::handlers::input_method::on_active_layout_changed;
+use crate::wayland::handlers::input_method::sync_input_method_with_layout;
 use crate::wayland::protocols::keyboard_layout::{KeyboardLayoutHandler, KeyboardLayoutState};
 
 impl KeyboardLayoutHandler for State {
@@ -22,7 +22,8 @@ impl KeyboardLayoutHandler for State {
             .find(|seat| seat.get_keyboard().as_ref() == Some(keyboard))
             .cloned();
         if let Some(seat) = seat {
-            on_active_layout_changed(self, &seat);
+            let layout = self.common.config.cosmic_conf.xkb_config.layout.clone();
+            sync_input_method_with_layout(self, &seat, &layout);
         }
     }
 }

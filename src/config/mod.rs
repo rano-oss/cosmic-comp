@@ -6,9 +6,7 @@ use crate::{
     state::{BackendData, State},
     utils::prelude::OutputExt,
     wayland::{
-        handlers::input_method::{
-            apply_saved_active_layout, sync_input_method_with_layout, sync_input_methods_all_seats,
-        },
+        handlers::input_method::{apply_saved_active_layout, sync_input_method_with_layout},
         protocols::{
             output_configuration::OutputConfigurationState, workspace::WorkspaceUpdateGuard,
         },
@@ -962,7 +960,18 @@ fn config_changed(config: cosmic_config::Config, keys: Vec<String>, state: &mut 
                     crate::wayland::handlers::input_method::allowed_app_ids_from_map(
                         &state.common.config.cosmic_conf.input_method_map,
                     );
-                sync_input_methods_all_seats(state);
+                let layout = state.common.config.cosmic_conf.xkb_config.layout.clone();
+                let seats = state
+                    .common
+                    .shell
+                    .read()
+                    .seats
+                    .iter()
+                    .cloned()
+                    .collect::<Vec<_>>();
+                for seat in seats {
+                    sync_input_method_with_layout(state, &seat, &layout);
+                }
             }
             "descale_xwayland" => {
                 let new = get_config::<XwaylandDescaling>(&config, "descale_xwayland");

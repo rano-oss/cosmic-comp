@@ -19,6 +19,7 @@ use wayland_backend::server::{ClientId, GlobalId};
 
 pub trait KeyboardLayoutHandler: SeatHandler {
     fn keyboard_layout_state(&mut self) -> &mut KeyboardLayoutState;
+    /// Group has been changed through the protocol
     fn group_changed(&mut self, keyboard: &KeyboardHandle<Self>);
 }
 
