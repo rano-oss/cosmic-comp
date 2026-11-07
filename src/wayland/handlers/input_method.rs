@@ -4,7 +4,6 @@ use crate::shell::Shell;
 use crate::state::{ClientState, State};
 use crate::utils::geometry::{PointExt, SizeExt};
 use crate::utils::prelude::OutputExt;
-use cosmic_comp_config::InputMethodEntry;
 use smithay::{
     desktop::{PopupKind, PopupManager, space::SpaceElement},
     output::Output,
@@ -12,28 +11,7 @@ use smithay::{
     utils::{Logical, Rectangle},
     wayland::input_method::{InputMethodHandler, InputMethodSeat, PopupSurface, PositionerState},
 };
-use std::collections::HashSet;
-use std::sync::{Arc, RwLock};
 use tracing::warn;
-
-/// App IDs allowed to bind the input-method / keyboard-filter globals.
-pub type AllowedImeAppIds = Arc<RwLock<HashSet<String>>>;
-
-pub fn allowed_app_ids_from_map(
-    map: &std::collections::HashMap<String, InputMethodEntry>,
-) -> HashSet<String> {
-    map.values().map(|e| e.app_id.clone()).collect()
-}
-
-pub fn is_privileged_ime_client(client: &Client, allowed: &AllowedImeAppIds) -> bool {
-    let Some(app_id) = client_security_app_id(client) else {
-        return false;
-    };
-    allowed
-        .read()
-        .map(|set| set.contains(app_id))
-        .unwrap_or(false)
-}
 
 impl InputMethodHandler for State {
     fn new_popup(&mut self, surface: PopupSurface) {

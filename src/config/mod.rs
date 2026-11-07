@@ -956,10 +956,6 @@ fn config_changed(config: cosmic_config::Config, keys: Vec<String>, state: &mut 
             "input_method_map" => {
                 state.common.config.cosmic_conf.input_method_map =
                     get_config(&config, "input_method_map");
-                *state.common.allowed_ime_app_ids.write().unwrap() =
-                    crate::wayland::handlers::input_method::allowed_app_ids_from_map(
-                        &state.common.config.cosmic_conf.input_method_map,
-                    );
                 let layout = state.common.config.cosmic_conf.xkb_config.layout.clone();
                 let seats = state
                     .common
