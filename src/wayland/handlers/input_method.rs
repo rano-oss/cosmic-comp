@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-use crate::shell::Shell;
 use crate::state::{ClientState, State};
 use crate::utils::geometry::{PointExt, SizeExt};
 use crate::utils::prelude::OutputExt;
 use smithay::{
     desktop::{PopupKind, PopupManager, space::SpaceElement},
-    output::Output,
     reexports::wayland_server::{Client, DisplayHandle, protocol::wl_surface::WlSurface},
     utils::{Logical, Rectangle},
     wayland::input_method::{InputMethodHandler, InputMethodSeat, PopupSurface, PositionerState},
@@ -16,7 +14,20 @@ use tracing::warn;
 impl InputMethodHandler for State {
     fn new_popup(&mut self, surface: PopupSurface) {
         if surface.repositions_via_configure() {
-            schedule_ime_popup_render(self, &surface);
+            if let Some(parent) = surface.get_parent() {
+                let shell = self.common.shell.read();
+                let output = shell
+                    .visible_output_for_surface(&parent.surface)
+                    .cloned()
+                    .or_else(|| {
+                        let elem = shell.element_for_surface(&parent.surface)?;
+                        shell.space_for(elem).map(|ws| ws.output.clone())
+                    });
+                if let Some(output) = output {
+                    drop(shell);
+                    self.backend.schedule_render(&output);
+                }
+            }
         }
         if let Err(err) = self.common.popups.track_popup(PopupKind::from(surface)) {
             warn!("Failed to track popup: {}", err);
@@ -49,7 +60,21 @@ impl InputMethodHandler for State {
     }
 
     fn ime_popup_configure_sent(&mut self, popup: PopupSurface) {
-        schedule_ime_popup_render(self, &popup);
+        let Some(parent) = popup.get_parent() else {
+            return;
+        };
+        let shell = self.common.shell.read();
+        let output = shell
+            .visible_output_for_surface(&parent.surface)
+            .cloned()
+            .or_else(|| {
+                let elem = shell.element_for_surface(&parent.surface)?;
+                shell.space_for(elem).map(|ws| ws.output.clone())
+            });
+        if let Some(output) = output {
+            drop(shell);
+            self.backend.schedule_render(&output);
+        }
     }
 
     fn popup_geometry(
@@ -61,7 +86,10 @@ impl InputMethodHandler for State {
         let shell = self.common.shell.read();
         let target = (|| {
             let elem = shell.element_for_surface(parent)?;
-            let output = output_for_surface(&shell, parent)?;
+            let output = shell
+                .visible_output_for_surface(parent)
+                .cloned()
+                .or_else(|| shell.space_for(elem).map(|ws| ws.output.clone()))?;
             let parent_geo = shell.element_geometry(elem)?;
             let origin = parent_geo.loc - elem.geometry().loc.as_global()
                 + elem.surface_offset(parent)?.as_global();
@@ -120,25 +148,6 @@ impl InputMethodHandler for State {
                 .set_active_instance(self, seat, app_id, false);
         }
     }
-}
-
-fn schedule_ime_popup_render(state: &mut State, popup: &PopupSurface) {
-    let Some(parent) = popup.get_parent() else {
-        return;
-    };
-    if let Some(output) = output_for_surface(&state.common.shell.read(), &parent.surface) {
-        state.backend.schedule_render(&output);
-    }
-}
-
-fn output_for_surface(shell: &Shell, surface: &WlSurface) -> Option<Output> {
-    shell
-        .visible_output_for_surface(surface)
-        .cloned()
-        .or_else(|| {
-            let elem = shell.element_for_surface(surface)?;
-            shell.space_for(elem).map(|ws| ws.output.clone())
-        })
 }
 
 pub fn apply_saved_active_layout(state: &mut State) {
