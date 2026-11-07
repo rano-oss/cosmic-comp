@@ -46,7 +46,19 @@ impl InputMethodHandler for State {
         positioner: &PositionerState,
     ) -> Rectangle<i32, Logical> {
         let shell = self.common.shell.read();
-        let target = ime_popup_target_rect(&shell, parent).unwrap_or_else(|| {
+        let target = (|| {
+            let elem = shell.element_for_surface(parent)?;
+            let output = output_for_surface(&shell, parent)?;
+            let parent_geo = shell.element_geometry(elem)?;
+            let origin = parent_geo.loc - elem.geometry().loc.as_global()
+                + elem.surface_offset(parent)?.as_global();
+            let output_geo = output.geometry();
+            Some(Rectangle::new(
+                (output_geo.loc.x - origin.x, output_geo.loc.y - origin.y).into(),
+                output_geo.size.as_logical(),
+            ))
+        })()
+        .unwrap_or_else(|| {
             let size = shell
                 .element_for_surface(parent)
                 .map(|e| e.geometry().size)
@@ -70,7 +82,12 @@ impl InputMethodHandler for State {
     }
 
     fn input_method_app_id(&self, client: &Client, _dh: &DisplayHandle) -> Option<String> {
-        client_security_app_id(client).map(str::to_owned)
+        client
+            .get_data::<ClientState>()?
+            .security_context
+            .as_ref()?
+            .app_id
+            .clone()
     }
 
     fn input_method_instance_registered(
@@ -79,7 +96,16 @@ impl InputMethodHandler for State {
         app_id: &str,
     ) {
         let layout = self.common.config.cosmic_conf.xkb_config.layout.clone();
-        let Some(code) = active_layout_code(self, seat, &layout) else {
+        let layouts: Vec<_> = layout.split(',').map(str::trim).collect();
+        let Some(code) = seat.get_keyboard().and_then(|kb| {
+            kb.with_xkb_state(self, |xkb| {
+                let idx = xkb.xkb().lock().unwrap().active_layout().0 as usize;
+                layouts
+                    .get(idx)
+                    .or_else(|| layouts.first())
+                    .map(|s| (*s).to_string())
+            })
+        }) else {
             return;
         };
         let wanted = self
@@ -105,19 +131,6 @@ fn schedule_ime_popup_render(state: &mut State, popup: &PopupSurface) {
     }
 }
 
-fn client_security_app_id(client: &Client) -> Option<&str> {
-    client
-        .get_data::<ClientState>()?
-        .security_context
-        .as_ref()?
-        .app_id
-        .as_deref()
-}
-
-fn xkb_layout_codes(layout: &str) -> Vec<&str> {
-    layout.split(',').map(str::trim).collect()
-}
-
 fn output_for_surface(shell: &Shell, surface: &WlSurface) -> Option<Output> {
     shell
         .visible_output_for_surface(surface)
@@ -128,20 +141,6 @@ fn output_for_surface(shell: &Shell, surface: &WlSurface) -> Option<Output> {
         })
 }
 
-/// Output in text-input surface coords (element_geo − CSD inset + surface_offset).
-fn ime_popup_target_rect(shell: &Shell, parent: &WlSurface) -> Option<Rectangle<i32, Logical>> {
-    let elem = shell.element_for_surface(parent)?;
-    let output = output_for_surface(shell, parent)?;
-    let parent_geo = shell.element_geometry(elem)?;
-    let origin =
-        parent_geo.loc - elem.geometry().loc.as_global() + elem.surface_offset(parent)?.as_global();
-    let output_geo = output.geometry();
-    Some(Rectangle::new(
-        (output_geo.loc.x - origin.x, output_geo.loc.y - origin.y).into(),
-        output_geo.size.as_logical(),
-    ))
-}
-
 pub fn apply_saved_active_layout(state: &mut State) {
     use smithay::input::keyboard::Layout;
 
@@ -150,7 +149,7 @@ pub fn apply_saved_active_layout(state: &mut State) {
         return;
     }
     let layout_string = state.common.config.cosmic_conf.xkb_config.layout.clone();
-    let layouts = xkb_layout_codes(&layout_string);
+    let layouts: Vec<_> = layout_string.split(',').map(str::trim).collect();
     let Some(idx) = layouts.iter().position(|l| *l == active) else {
         warn!(
             active,
@@ -172,33 +171,6 @@ pub fn apply_saved_active_layout(state: &mut State) {
     }
 }
 
-fn active_layout_code(
-    state: &mut State,
-    seat: &smithay::input::Seat<State>,
-    layout: &str,
-) -> Option<String> {
-    let layouts = xkb_layout_codes(layout);
-    if layouts.is_empty() {
-        return None;
-    }
-    if let Some(kb) = seat.get_keyboard() {
-        kb.with_xkb_state(state, |xkb| {
-            let idx = xkb.xkb().lock().unwrap().active_layout().0 as usize;
-            layouts
-                .get(idx)
-                .or_else(|| layouts.first())
-                .map(|s| (*s).to_string())
-        })
-    } else {
-        let saved = state.common.config.cosmic_conf.active_layout.trim();
-        if !saved.is_empty() && layouts.contains(&saved) {
-            Some(saved.to_string())
-        } else {
-            layouts.first().map(|s| (*s).to_string())
-        }
-    }
-}
-
 pub fn sync_input_method_with_layout(
     state: &mut State,
     seat: &smithay::input::Seat<State>,
@@ -207,7 +179,16 @@ pub fn sync_input_method_with_layout(
     use cosmic_config::ConfigSet;
     use tracing::error;
 
-    let code = active_layout_code(state, seat, layout);
+    let layouts: Vec<_> = layout.split(',').map(str::trim).collect();
+    let code = seat.get_keyboard().and_then(|kb| {
+        kb.with_xkb_state(state, |xkb| {
+            let idx = xkb.xkb().lock().unwrap().active_layout().0 as usize;
+            layouts
+                .get(idx)
+                .or_else(|| layouts.first())
+                .map(|s| (*s).to_string())
+        })
+    });
     let app_id = code.as_ref().and_then(|c| {
         state
             .common
@@ -225,20 +206,12 @@ pub fn sync_input_method_with_layout(
             im.clear_active_instance(state, seat);
         }
         Some(app_id) => {
-            let before = im.active_app_id();
             if !im.set_active_instance(state, seat, &app_id, true) {
                 // Don't clear when the target IME is not registered yet (eats filter buffer).
                 if im.active_app_id().is_some_and(|id| id != app_id) {
                     im.clear_active_instance(state, seat);
                 }
                 warn!(%app_id, "input method for layout not registered yet");
-            } else {
-                warn!(
-                    %layout,
-                    ?before,
-                    after = %app_id,
-                    "synced active IME with layout"
-                );
             }
         }
     }
@@ -250,7 +223,12 @@ pub fn sync_input_method_with_layout(
         return;
     }
     state.common.config.cosmic_conf.active_layout = code.clone();
-    if let Err(err) = state.common.config.cosmic_helper.set("active_layout", &code) {
+    if let Err(err) = state
+        .common
+        .config
+        .cosmic_helper
+        .set("active_layout", &code)
+    {
         error!(?err, "Failed to write active_layout");
     }
 }
