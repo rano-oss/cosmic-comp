@@ -284,7 +284,9 @@ impl CompositorHandler for State {
         if let Some(popup) = self.common.popups.find_popup(surface) {
             xdg_popup_ensure_initial_configure(&popup);
             // The IME popup need to be repositioned when the size changed
-            if let PopupKind::InputMethod(_) = popup {
+            if let PopupKind::InputMethod(im) = &popup
+                && !im.repositions_via_configure()
+            {
                 shell.unconstrain_popup(&popup);
             }
             return;

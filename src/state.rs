@@ -707,7 +707,21 @@ impl State {
         PointerGesturesState::new::<Self>(dh);
         TabletManagerState::new::<Self>(dh);
         SecurityContextState::new::<Self, _>(dh, client_has_no_security_context);
-        InputMethodManagerState::new::<Self, _>(dh, client_not_sandboxed);
+        InputMethodManagerState::new_with_keyboard_filter::<Self, _>(dh, {
+            let allowed: HashSet<String> = config
+                .cosmic_conf
+                .input_method_map
+                .values()
+                .map(|e| e.app_id.clone())
+                .collect();
+            move |client: &Client| {
+                client
+                    .get_data::<ClientState>()
+                    .and_then(|s| s.security_context.as_ref())
+                    .and_then(|ctx| ctx.app_id.as_deref())
+                    .is_some_and(|id| allowed.contains(id))
+            }
+        });
         TextInputManagerState::new::<Self>(dh);
         VirtualKeyboardManagerState::new::<State, _>(dh, client_not_sandboxed);
         AlphaModifierState::new::<Self>(dh);

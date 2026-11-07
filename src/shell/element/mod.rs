@@ -12,7 +12,7 @@ use id_tree::NodeId;
 use smithay::{
     backend::{
         drm::DrmNode,
-        input::{InputTime, KeyState},
+        input::{InputTime, KeyState, Keycode},
         renderer::{
             element::{
                 Element, Kind, RenderElement, UnderlyingStorage,
@@ -1041,6 +1041,24 @@ impl KeyboardTarget<State> for CosmicMapped {
             }
             CosmicMappedInternal::Window(w) => {
                 KeyboardTarget::modifiers(w, seat, data, modifiers, serial)
+            }
+            _ => {}
+        }
+    }
+    fn repeat(
+        &self,
+        seat: &Seat<State>,
+        data: &mut State,
+        keycode: Keycode,
+        serial: Serial,
+        time: InputTime,
+    ) {
+        match &self.element {
+            CosmicMappedInternal::Stack(s) => {
+                KeyboardTarget::repeat(s, seat, data, keycode, serial, time)
+            }
+            CosmicMappedInternal::Window(w) => {
+                KeyboardTarget::repeat(w, seat, data, keycode, serial, time)
             }
             _ => {}
         }

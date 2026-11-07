@@ -59,10 +59,10 @@ impl KeyboardLayoutState {
                 let active_layout = handle.with_xkb_state(state, |context| {
                     context.xkb().lock().unwrap().active_layout()
                 });
-                state.group_changed(handle);
                 if *last_layout != Some(active_layout) {
                     keyboard_layout.group(active_layout.0);
                     *last_layout = Some(active_layout);
+                    state.group_changed(handle);
                 }
             }
         }
