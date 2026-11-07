@@ -28,6 +28,11 @@ impl InputMethodHandler for State {
                     self.backend.schedule_render(&output);
                 }
             }
+        } else {
+            self.common
+                .shell
+                .read()
+                .unconstrain_popup(&PopupKind::from(surface.clone()));
         }
         if let Err(err) = self.common.popups.track_popup(PopupKind::from(surface)) {
             warn!("Failed to track popup: {}", err);
