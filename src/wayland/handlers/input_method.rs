@@ -19,7 +19,7 @@ impl InputMethodHandler for State {
             schedule_ime_popup_render(self, &surface);
         }
         if let Err(err) = self.common.popups.track_popup(PopupKind::from(surface)) {
-            warn!("Failed to track popup: {err}");
+            warn!("Failed to track popup: {}", err);
         }
     }
 
