@@ -706,13 +706,13 @@ impl State {
         PointerGesturesState::new::<Self>(dh);
         TabletManagerState::new::<Self>(dh);
         SecurityContextState::new::<Self, _>(dh, client_has_no_security_context);
-        let allowed_ime: HashSet<String> = config
-            .cosmic_conf
-            .input_method_map
-            .values()
-            .map(|e| e.app_id.clone())
-            .collect();
-        let ime_client_filter = |allowed: HashSet<String>| {
+        InputMethodManagerState::new_with_keyboard_filter::<Self, _>(dh, {
+            let allowed: HashSet<String> = config
+                .cosmic_conf
+                .input_method_map
+                .values()
+                .map(|e| e.app_id.clone())
+                .collect();
             move |client: &Client| {
                 client
                     .get_data::<ClientState>()
@@ -720,12 +720,7 @@ impl State {
                     .and_then(|ctx| ctx.app_id.as_deref())
                     .is_some_and(|id| allowed.contains(id))
             }
-        };
-        InputMethodManagerState::new::<Self, _>(dh, ime_client_filter(allowed_ime.clone()));
-        smithay::wayland::keyboard_filter::KeyboardFilterManagerState::new::<Self, _>(
-            dh,
-            ime_client_filter(allowed_ime),
-        );
+        });
         TextInputManagerState::new::<Self>(dh);
         AlphaModifierState::new::<Self>(dh);
         SinglePixelBufferState::new::<Self>(dh);
