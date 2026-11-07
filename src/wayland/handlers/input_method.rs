@@ -29,14 +29,27 @@ impl InputMethodHandler for State {
         }
     }
 
-    fn ime_popup_configure_sent(&mut self, popup: PopupSurface) {
-        schedule_ime_popup_render(self, &popup);
+    fn parent_geometry(&self, parent: &WlSurface) -> Rectangle<i32, Logical> {
+        self.common
+            .shell
+            .read()
+            .element_for_surface(parent)
+            .and_then(|elem| {
+                elem.windows()
+                    .find(|(w, _)| w.surface_offset(parent).is_some())
+                    .map(|(w, _)| w.geometry())
+            })
+            .unwrap_or_default()
     }
 
     fn popup_repositioned(&mut self, popup: PopupSurface) {
         if !popup.repositions_via_configure() {
             self.common.shell.read().unconstrain_popup(&popup.into());
         }
+    }
+
+    fn ime_popup_configure_sent(&mut self, popup: PopupSurface) {
+        schedule_ime_popup_render(self, &popup);
     }
 
     fn popup_geometry(
@@ -66,19 +79,6 @@ impl InputMethodHandler for State {
             Rectangle::new((0, 0).into(), size)
         });
         positioner.get_unconstrained_geometry(*cursor, target)
-    }
-
-    fn parent_geometry(&self, parent: &WlSurface) -> Rectangle<i32, Logical> {
-        self.common
-            .shell
-            .read()
-            .element_for_surface(parent)
-            .and_then(|elem| {
-                elem.windows()
-                    .find(|(w, _)| w.surface_offset(parent).is_some())
-                    .map(|(w, _)| w.geometry())
-            })
-            .unwrap_or_default()
     }
 
     fn input_method_app_id(&self, client: &Client, _dh: &DisplayHandle) -> Option<String> {
