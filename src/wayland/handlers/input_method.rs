@@ -185,7 +185,6 @@ pub fn sync_input_method_with_layout(
     seat: &smithay::input::Seat<State>,
     layout: &str,
 ) {
-    use cosmic_config::ConfigSet;
     use tracing::error;
 
     let layouts: Vec<_> = layout.split(',').map(str::trim).collect();
@@ -228,15 +227,11 @@ pub fn sync_input_method_with_layout(
     let Some(code) = code else {
         return;
     };
-    if state.common.config.cosmic_conf.active_layout == code {
-        return;
-    }
-    state.common.config.cosmic_conf.active_layout = code.clone();
     if let Err(err) = state
         .common
         .config
-        .cosmic_helper
-        .set("active_layout", &code)
+        .cosmic_conf
+        .set_active_layout(&state.common.config.cosmic_helper, code)
     {
         error!(?err, "Failed to write active_layout");
     }
